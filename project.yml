@@ -1,0 +1,78 @@
+name: Kept
+options:
+  bundleIdPrefix: com.kept
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  Dependencies:
+    url: https://github.com/pointfreeco/swift-dependencies
+    from: 1.9.0
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: 1.18.0
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    # Deliberate isolation posture (AGENTS.md tripwire): Xcode 26 approachable-concurrency
+    # defaults, chosen for the app target — models opt out explicitly where needed.
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Kept:
+    type: application
+    platform: iOS
+    sources:
+      - path: Kept
+        excludes:
+          - "**/*.md"
+          - "**/.gitkeep"
+    dependencies:
+      - package: Dependencies
+        product: Dependencies
+    info:
+      path: Kept/Resources/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIAppFonts: [Fraunces.ttf, Quicksand.ttf]
+        NSFaceIDUsageDescription: "Only your face opens your world."
+        CFBundleURLTypes:
+          - CFBundleURLName: com.kept.app
+            CFBundleURLSchemes: [kept]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kept.app
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "0.1.0"
+
+  KeptTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - KeptTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Kept
+      - package: Dependencies
+        product: Dependencies
+      - package: SnapshotTesting
+        product: SnapshotTesting
+
+schemes:
+  Kept:
+    build:
+      targets:
+        Kept: all
+    test:
+      targets:
+        - KeptTests
