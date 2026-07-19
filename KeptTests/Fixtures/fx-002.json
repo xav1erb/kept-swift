@@ -1,0 +1,26 @@
+{
+  "id": "fx-002",
+  "title": "Onboarding, full fork — census blocks at survey depth",
+  "profile": { "name": "Ana", "onboardingMode": "full" },
+  "steps": [
+    {
+      "surface": "onboarding",
+      "clientTime": "2026-07-19T18:10:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000002-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "family", "chapterKind": "dimension", "title": "Family" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Mara", "relation": "mother", "chapterRefs": [ { "ref": "c1" } ] },
+          { "kind": "fillSlots", "chapterRef": { "ref": "c1" }, "slots": [ "keyPeople", "homeBase", "dynamics", "currentState" ] },
+          { "kind": "upsertChapter", "ref": "c2", "type": "work", "chapterKind": "dimension", "title": "Work" },
+          { "kind": "fillSlots", "chapterRef": { "ref": "c2" }, "slots": [ "role", "place", "currentState" ] },
+          { "kind": "upsertChapter", "ref": "c3", "type": "money", "chapterKind": "dimension", "title": "Money" },
+          { "kind": "fillSlots", "chapterRef": { "ref": "c3" }, "slots": [ "situation", "goals" ] },
+          { "kind": "upsertGoal", "ref": "g1", "chapterRef": { "ref": "c3" }, "text": "€6,000 saved", "progressNote": "at €4,200" }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

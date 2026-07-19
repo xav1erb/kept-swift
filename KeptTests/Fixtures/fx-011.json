@@ -1,0 +1,20 @@
+{
+  "id": "fx-011",
+  "title": "Sensitive-type creation (grief) — internal slots fill; no count exposed anywhere",
+  "steps": [
+    {
+      "surface": "chapterChat",
+      "clientTime": "2026-07-19T22:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000011-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "grief", "chapterKind": "situational", "title": "Losing Oma", "state": "quiet" },
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c1" }, "date": "2026-05-02", "datePrecision": "day", "title": "The call", "body": "The morning dad called about Oma.", "valence": "storm", "isOpen": true, "isUpcoming": false },
+          { "kind": "fillSlots", "chapterRef": { "ref": "c1" }, "slots": [ "whoOrWhat", "relationship", "whereYouAre" ] }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

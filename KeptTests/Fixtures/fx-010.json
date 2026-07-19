@@ -1,0 +1,69 @@
+{
+  "id": "fx-010",
+  "title": "Poisoned envelopes — loud rejection, store untouched",
+  "poisoned": {
+    "unknownKind": {
+      "schemaVersion": 1,
+      "utteranceId": "F0000010-0000-4000-8000-000000000001",
+      "deltas": [ { "kind": "deleteEverything", "target": "all" } ],
+      "disambiguations": []
+    },
+    "unknownEnum": {
+      "schemaVersion": 1,
+      "utteranceId": "F0000010-0000-4000-8000-000000000002",
+      "deltas": [
+        { "kind": "upsertChapter", "ref": "c1", "type": "relationship", "chapterKind": "situational", "title": "X" },
+        { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c1" }, "datePrecision": "day", "title": "X", "body": "X", "valence": "amazing", "isOpen": true, "isUpcoming": false }
+      ],
+      "disambiguations": []
+    },
+    "bothIdAndRef": {
+      "schemaVersion": 1,
+      "utteranceId": "F0000010-0000-4000-8000-000000000003",
+      "deltas": [
+        { "kind": "setChapterState", "chapterRef": { "id": "7A000000-0000-4000-8000-000000000001", "ref": "c1" }, "state": "warm" }
+      ],
+      "disambiguations": []
+    },
+    "malformedDate": {
+      "schemaVersion": 1,
+      "utteranceId": "F0000010-0000-4000-8000-000000000004",
+      "deltas": [
+        { "kind": "upsertChapter", "ref": "c1", "type": "relationship", "chapterKind": "situational", "title": "X" },
+        { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c1" }, "date": "2026-02-31", "datePrecision": "day", "title": "X", "body": "X", "valence": "neutral", "isOpen": true, "isUpcoming": false }
+      ],
+      "disambiguations": []
+    },
+    "forwardRef": {
+      "schemaVersion": 1,
+      "utteranceId": "F0000010-0000-4000-8000-000000000005",
+      "deltas": [
+        { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c9" }, "datePrecision": "day", "title": "X", "body": "X", "valence": "neutral", "isOpen": true, "isUpcoming": false }
+      ],
+      "disambiguations": []
+    },
+    "fabricatedId": {
+      "schemaVersion": 1,
+      "utteranceId": "F0000010-0000-4000-8000-000000000006",
+      "deltas": [
+        { "kind": "setChapterState", "chapterRef": { "id": "7A000000-0000-4000-8000-00000000DEAD" }, "state": "warm" }
+      ],
+      "disambiguations": []
+    },
+    "badSlot": {
+      "schemaVersion": 1,
+      "utteranceId": "F0000010-0000-4000-8000-000000000007",
+      "deltas": [
+        { "kind": "upsertChapter", "ref": "c1", "type": "relationship", "chapterKind": "situational", "title": "X" },
+        { "kind": "fillSlots", "chapterRef": { "ref": "c1" }, "slots": [ "favoriteColor" ] }
+      ],
+      "disambiguations": []
+    },
+    "wrongSchemaVersion": {
+      "schemaVersion": 99,
+      "utteranceId": "F0000010-0000-4000-8000-000000000008",
+      "deltas": [],
+      "disambiguations": []
+    }
+  }
+}

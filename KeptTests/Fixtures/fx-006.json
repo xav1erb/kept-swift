@@ -1,0 +1,33 @@
+{
+  "id": "fx-006",
+  "title": "Commitment lifecycle — made (dated) → later utterance breaks it with evidence",
+  "steps": [
+    {
+      "surface": "chapterChat",
+      "clientTime": "2026-06-01T19:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000006-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "relationship", "chapterKind": "situational", "title": "Daniel" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Daniel", "relation": "partner", "chapterRefs": [ { "ref": "c1" } ] },
+          { "kind": "addCommitment", "ref": "cm1", "chapterRef": { "ref": "c1" }, "personRef": { "ref": "p1" }, "text": "call every Sunday", "dateMade": "2026-06-01", "datePrecision": "day" }
+        ],
+        "disambiguations": []
+      }
+    },
+    {
+      "surface": "vent",
+      "clientTime": "2026-07-12T22:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000006-0000-4000-8000-000000000002",
+        "deltas": [
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "id": "$chapter:Daniel" }, "date": "2026-07-12", "datePrecision": "day", "title": "Missed the Sunday call", "body": "No call again today, no message either.", "valence": "storm", "isOpen": true, "isUpcoming": false },
+          { "kind": "updateCommitmentStatus", "commitmentRef": { "id": "$commitment:call every Sunday" }, "status": "broken", "evidenceEventRef": { "ref": "e1" } }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

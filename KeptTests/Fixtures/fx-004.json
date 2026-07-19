@@ -1,0 +1,50 @@
+{
+  "id": "fx-004",
+  "title": "Two Saras — model-flagged disambiguation; ALL Sara-deltas held; nothing auto-merged",
+  "steps": [
+    {
+      "surface": "onboarding",
+      "clientTime": "2026-07-17T10:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000004-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "work", "chapterKind": "dimension", "title": "Work" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Sara", "relation": "colleague", "chapterRefs": [ { "ref": "c1" } ] }
+        ],
+        "disambiguations": []
+      }
+    },
+    {
+      "surface": "chapterChat",
+      "clientTime": "2026-07-18T10:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000004-0000-4000-8000-000000000002",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "friendship", "chapterKind": "dimension", "title": "Friends" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Sara", "relation": "friend", "chapterRefs": [ { "ref": "c1" } ] }
+        ],
+        "disambiguations": [
+          { "ref": "p1", "mention": "Sara", "candidateIds": [ "$person:Sara/colleague" ], "question": "A different Sara than work-Sara, right?" }
+        ]
+      },
+      "resolutions": [ { "mention": "Sara" } ]
+    },
+    {
+      "surface": "vent",
+      "clientTime": "2026-07-19T20:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000004-0000-4000-8000-000000000003",
+        "deltas": [
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "id": "$chapter:Work" }, "date": "2026-07-19", "datePrecision": "day", "title": "Sara said she's proud of me", "body": "Sara told me she's proud of how I handled the launch.", "valence": "gold", "isOpen": false, "isUpcoming": false },
+          { "kind": "setPersonMood", "personRef": { "ref": "p9" }, "mood": "warm" }
+        ],
+        "disambiguations": [
+          { "ref": "p9", "mention": "Sara", "candidateIds": [ "$person:Sara/colleague", "$person:Sara/friend" ], "question": "work-Sara, not friend-Sara, right?" }
+        ]
+      }
+    }
+  ]
+}

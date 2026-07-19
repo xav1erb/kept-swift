@@ -1,0 +1,37 @@
+{
+  "id": "fx-003",
+  "title": "Three-topic vent (mom / work / money) — exactly 3 chapters touched, no 4th write",
+  "steps": [
+    {
+      "surface": "onboarding",
+      "clientTime": "2026-07-18T09:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000003-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "family", "chapterKind": "dimension", "title": "Family" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Mara", "relation": "mother", "chapterRefs": [ { "ref": "c1" } ] },
+          { "kind": "upsertChapter", "ref": "c2", "type": "work", "chapterKind": "dimension", "title": "Work" },
+          { "kind": "upsertChapter", "ref": "c3", "type": "money", "chapterKind": "dimension", "title": "Money" }
+        ],
+        "disambiguations": []
+      }
+    },
+    {
+      "surface": "vent",
+      "clientTime": "2026-07-19T21:30:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000003-0000-4000-8000-000000000002",
+        "deltas": [
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "id": "$chapter:Family" }, "date": "2026-07-19", "datePrecision": "day", "title": "Argument with mom", "body": "Mom and I argued on the phone about the visit again.", "valence": "storm", "isOpen": true, "isUpcoming": false },
+          { "kind": "setPersonMood", "personRef": { "id": "$person:Mara/mother" }, "mood": "tense" },
+          { "kind": "setChapterState", "chapterRef": { "id": "$chapter:Family" }, "state": "tense" },
+          { "kind": "addEvent", "ref": "e2", "chapterRef": { "id": "$chapter:Work" }, "date": "2026-07-20", "datePrecision": "day", "title": "Deadline moved up", "body": "The launch deadline moved to Monday.", "valence": "neutral", "isOpen": true, "isUpcoming": true },
+          { "kind": "addEvent", "ref": "e3", "chapterRef": { "id": "$chapter:Money" }, "date": "2026-07-19", "datePrecision": "day", "title": "Overspent this week", "body": "Went over budget again this week.", "valence": "storm", "isOpen": true, "isUpcoming": false }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

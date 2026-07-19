@@ -1,0 +1,22 @@
+{
+  "id": "fx-007",
+  "title": "Positive anchor (Q6) — bright events, keep-card material, correct valence",
+  "steps": [
+    {
+      "surface": "onboarding",
+      "clientTime": "2026-07-19T18:05:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000007-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "relationship", "chapterKind": "situational", "title": "Daniel" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Daniel", "relation": "partner", "chapterRefs": [ { "ref": "c1" } ] },
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c1" }, "datePrecision": "unknown", "title": "Sunday cooking", "body": "We cook together every Sunday — it's the warmest part of the week.", "valence": "bright", "isOpen": false, "isUpcoming": false },
+          { "kind": "addEvent", "ref": "e2", "chapterRef": { "ref": "c1" }, "date": "2026-07-11", "datePrecision": "day", "title": "Sunset at the pier", "body": "He surprised me at the pier for the sunset.", "valence": "gold", "isOpen": false, "isUpcoming": false },
+          { "kind": "fillSlots", "chapterRef": { "ref": "c1" }, "slots": [ "positives" ] }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

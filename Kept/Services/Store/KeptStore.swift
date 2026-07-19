@@ -25,6 +25,7 @@ final class KeptStore {
         let schema = Schema([
             UserProfile.self, Chapter.self, Person.self, Event.self, Commitment.self,
             Goal.self, Reminder.self, NotificationPrefs.self, Achievement.self, CrossLink.self,
+            AppliedUtterance.self, HeldDeltaBatch.self,
         ])
         switch configuration {
         case .live:
@@ -115,8 +116,9 @@ final class KeptStore {
         }
     }
 
-    /// Folded events are INCLUDED here — the River/timeline renders them folded. The read model
-    /// that feeds prompt context (M1) is a separate, folded-excluding read by construction (C3).
+    /// Folded events are INCLUDED here — the River/timeline renders them folded. Extraction
+    /// context also includes them, flagged `isHealed` (M1-CONTRACTS §8.3 ruling), so folded
+    /// memories id-match instead of duplicating.
     func events(inChapter chapterId: UUID) throws -> [EventSnapshot] {
         let descriptor = FetchDescriptor<Event>(
             predicate: #Predicate { $0.chapter?.id == chapterId },
@@ -160,11 +162,65 @@ final class KeptStore {
         }
     }
 
+    /// Minimum-necessary context for the proxy (M1-CONTRACTS §4). Folded events travel WITH
+    /// `isHealed: true` (§8.3 ruling). `recentEventLimit` bounds the event window — an event id
+    /// outside this window is unknown to the model, and the merge validates ids against exactly
+    /// what was sent.
+    func extractionContext(recentEventLimit: Int = 20) throws -> ExtractionContext {
+        let people = try context.fetch(FetchDescriptor<Person>(sortBy: [SortDescriptor(\.name)]))
+            .map { ExtractionContext.PersonContext(id: $0.id, name: $0.name, relation: $0.relation) }
+        let chapters = try fetchAllChapters().map {
+            ExtractionContext.ChapterContext(
+                id: $0.id, type: $0.type, title: $0.title, state: $0.state, filledSlots: $0.filledSlots
+            )
+        }
+        // #Predicate can't express enum equality (Store CLAUDE.md gotcha class) — filter in Swift.
+        let openCommitments = try context.fetch(FetchDescriptor<Commitment>(
+            sortBy: [SortDescriptor(\.dateMade)]
+        ))
+        .filter { $0.status == .held }
+        .map {
+            ExtractionContext.CommitmentContext(
+                id: $0.id, personId: $0.person?.id, text: $0.text, dateMade: WireDate(date: $0.dateMade)
+            )
+        }
+        var eventDescriptor = FetchDescriptor<Event>(
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        eventDescriptor.fetchLimit = recentEventLimit
+        let recentEvents = try context.fetch(eventDescriptor).map {
+            ExtractionContext.EventContext(
+                id: $0.id, chapterId: $0.chapter?.id, title: $0.title,
+                date: WireDate(date: $0.date), isOpen: $0.isOpen, isHealed: $0.isHealed
+            )
+        }
+        return ExtractionContext(
+            people: people, chapters: chapters,
+            openCommitments: openCommitments, recentEvents: recentEvents
+        )
+    }
+
     // MARK: - Commands (typed mutations; the M1 merge engine builds on these)
 
     func setUserName(_ name: String) throws {
         let profile = try fetchOrCreateProfile()
         profile.name = name
+        try context.save()
+    }
+
+    /// Structured census answers (onboarding chips/fields) write directly — C1 governs
+    /// *utterances*; a chip tap is not an utterance (M1-CONTRACTS §8 amendments).
+    func setUserBasics(age: Int? = nil, city: String? = nil, occupation: String? = nil) throws {
+        let profile = try fetchOrCreateProfile()
+        if let age { profile.age = age }
+        if let city { profile.city = city }
+        if let occupation { profile.occupation = occupation }
+        try context.save()
+    }
+
+    func setOnboardingMode(_ mode: OnboardingMode) throws {
+        let profile = try fetchOrCreateProfile()
+        profile.onboardingMode = mode
         try context.save()
     }
 
@@ -285,6 +341,24 @@ final class KeptStore {
         try context.save()
     }
 
+    // MARK: - Merge-engine surface (internal to Services/Store — features never touch these; the
+    // C7 boundary is the folder + review, and F11 bans @Query in views regardless)
+
+    var modelContext: ModelContext { context }
+
+    func fetchChapterModel(_ id: UUID) throws -> Chapter { try fetchChapter(id) }
+    func fetchPersonModel(_ id: UUID) throws -> Person { try fetchPerson(id) }
+    func fetchEventModel(_ id: UUID) throws -> Event { try fetchEvent(id) }
+    func fetchCommitmentModel(_ id: UUID) throws -> Commitment { try fetchCommitment(id) }
+
+    func fetchGoalModel(_ id: UUID) throws -> Goal {
+        let descriptor = FetchDescriptor<Goal>(predicate: #Predicate { $0.id == id })
+        guard let goal = try context.fetch(descriptor).first else {
+            throw StoreError.notFound("Goal \(id)")
+        }
+        return goal
+    }
+
     // MARK: - Private
 
     private func fetchOrCreateProfile() throws -> UserProfile {
@@ -347,7 +421,8 @@ final class KeptStore {
         EventSnapshot(
             id: event.id, chapterId: event.chapter?.id, date: event.date, title: event.title,
             body: event.body, valence: event.valence, isOpen: event.isOpen,
-            isHealed: event.isHealed, isUpcoming: event.isUpcoming, source: event.source
+            isHealed: event.isHealed, healedReason: event.healedReason,
+            isUpcoming: event.isUpcoming, source: event.source
         )
     }
 }

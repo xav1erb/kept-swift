@@ -1,0 +1,20 @@
+{
+  "id": "fx-009",
+  "title": "Idempotent replay — the same envelope twice is a no-op",
+  "steps": [
+    {
+      "surface": "vent",
+      "clientTime": "2026-07-19T20:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000009-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "health", "chapterKind": "dimension", "title": "Health", "state": "fine" },
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c1" }, "date": "2026-07-19", "datePrecision": "day", "title": "First run in weeks", "body": "Went for a run again, felt good.", "valence": "bright", "isOpen": false, "isUpcoming": false },
+          { "kind": "fillSlots", "chapterRef": { "ref": "c1" }, "slots": [ "routines", "currentState" ] }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

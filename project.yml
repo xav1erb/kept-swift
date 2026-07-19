@@ -57,7 +57,11 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - KeptTests
+      - path: KeptTests
+        excludes:
+          - "Fixtures/**"
+      - path: KeptTests/Fixtures
+        buildPhase: resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

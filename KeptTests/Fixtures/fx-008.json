@@ -1,0 +1,45 @@
+{
+  "id": "fx-008",
+  "title": "Folding — user's own words fold; refolding never overwrites; unfold does not exist",
+  "steps": [
+    {
+      "surface": "vent",
+      "clientTime": "2026-07-01T21:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000008-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "family", "chapterKind": "dimension", "title": "Family", "state": "tense" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Mara", "relation": "mother", "chapterRefs": [ { "ref": "c1" } ] },
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c1" }, "date": "2026-06-28", "datePrecision": "day", "title": "The birthday fight", "body": "She forgot, then acted like it was my fault for expecting anything.", "valence": "storm", "isOpen": true, "isUpcoming": false }
+        ],
+        "disambiguations": []
+      }
+    },
+    {
+      "surface": "chapterChat",
+      "clientTime": "2026-07-15T20:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000008-0000-4000-8000-000000000002",
+        "deltas": [
+          { "kind": "foldEvent", "eventId": "$event:The birthday fight", "reason": "We talked properly and I forgave her" },
+          { "kind": "setChapterState", "chapterRef": { "id": "$chapter:Family" }, "state": "warm" }
+        ],
+        "disambiguations": []
+      }
+    },
+    {
+      "surface": "chapterChat",
+      "clientTime": "2026-07-16T20:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000008-0000-4000-8000-000000000003",
+        "deltas": [
+          { "kind": "foldEvent", "eventId": "$event:The birthday fight", "reason": "seems resolved" }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

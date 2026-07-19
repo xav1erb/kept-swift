@@ -1,0 +1,32 @@
+{
+  "id": "fx-005",
+  "title": "Name collision the model missed — the merge's deterministic backstop converts the create into a disambiguation",
+  "steps": [
+    {
+      "surface": "onboarding",
+      "clientTime": "2026-07-17T10:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000005-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "work", "chapterKind": "dimension", "title": "Work" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Sara", "relation": "colleague", "chapterRefs": [ { "ref": "c1" } ] }
+        ],
+        "disambiguations": []
+      }
+    },
+    {
+      "surface": "vent",
+      "clientTime": "2026-07-19T20:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000005-0000-4000-8000-000000000002",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "friendship", "chapterKind": "dimension", "title": "Friends" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Sara", "relation": "friend from yoga", "chapterRefs": [ { "ref": "c1" } ], "mood": "warm" }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}

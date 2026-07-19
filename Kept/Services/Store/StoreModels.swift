@@ -46,6 +46,7 @@ final class Chapter {
     var iconRef: String
     var state: ChapterState
     var awarenessPct: Int
+    var filledSlots: [String] = []
     var priority: Int
     var isResting: Bool
     var closingLetter: String?
@@ -120,6 +121,9 @@ final class Event {
     var valence: Valence
     var isOpen: Bool
     var isHealed: Bool
+    /// Quotes/paraphrases the user's own words of resolution (extraction.md §3 rule 4).
+    /// Set once when the fold applies; refolding an already-healed event never overwrites it.
+    var healedReason: String? = nil
     var isUpcoming: Bool
     var source: EventSource
 
@@ -241,5 +245,64 @@ final class CrossLink {
     init(id: UUID = UUID(), note: String) {
         self.id = id
         self.note = note
+    }
+}
+
+/// Idempotency record (extraction.md §3 rule 1): one row per applied envelope. A duplicate
+/// envelope is a no-op; retries after a mid-merge crash are therefore safe. Internal to the
+/// merge — never surfaces in a read model.
+@Model
+final class AppliedUtterance {
+    @Attribute(.unique) var utteranceId: UUID
+    var appliedAt: Date
+
+    init(utteranceId: UUID, appliedAt: Date = .now) {
+        self.utteranceId = utteranceId
+        self.appliedAt = appliedAt
+    }
+}
+
+/// The persisted disambiguation queue (extraction.md §2, atomicity exception): deltas referencing
+/// an ambiguous person are parked here — surviving app restarts — until the user answers the
+/// question (C4 gate). `deltasJSON` holds the held `[Delta]`; `bindingsJSON` holds the
+/// ref → UUID map from the envelope's applied portion so held deltas re-resolve exactly.
+@Model
+final class HeldDeltaBatch {
+    @Attribute(.unique) var id: UUID
+    var utteranceId: UUID
+    var ref: String
+    var mention: String
+    var candidateIds: [UUID]
+    var question: String
+    var deltasJSON: Data
+    var bindingsJSON: Data
+    var surfaceRaw: String
+    var clientTime: Date
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        utteranceId: UUID,
+        ref: String,
+        mention: String,
+        candidateIds: [UUID],
+        question: String,
+        deltasJSON: Data,
+        bindingsJSON: Data,
+        surfaceRaw: String,
+        clientTime: Date,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.utteranceId = utteranceId
+        self.ref = ref
+        self.mention = mention
+        self.candidateIds = candidateIds
+        self.question = question
+        self.deltasJSON = deltasJSON
+        self.bindingsJSON = bindingsJSON
+        self.surfaceRaw = surfaceRaw
+        self.clientTime = clientTime
+        self.createdAt = createdAt
     }
 }

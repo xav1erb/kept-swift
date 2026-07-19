@@ -60,6 +60,7 @@ struct EventSnapshot: Equatable, Sendable, Identifiable {
     let valence: Valence
     let isOpen: Bool
     let isHealed: Bool
+    let healedReason: String?
     let isUpcoming: Bool
     let source: EventSource
 }

@@ -1,0 +1,38 @@
+{
+  "id": "fx-001",
+  "title": "Onboarding, focus fork, the Daniel disclosure (whitepaper script)",
+  "profile": { "name": "Ana", "onboardingMode": "focus", "age": 24, "city": "Amsterdam", "occupation": "marketing" },
+  "steps": [
+    {
+      "surface": "onboarding",
+      "clientTime": "2026-07-19T18:00:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000001-0000-4000-8000-000000000001",
+        "deltas": [
+          { "kind": "upsertChapter", "ref": "c1", "type": "relationship", "chapterKind": "situational", "title": "Daniel · the Instagram thing", "state": "tense" },
+          { "kind": "upsertPerson", "ref": "p1", "name": "Daniel", "relation": "partner", "chapterRefs": [ { "ref": "c1" } ] },
+          { "kind": "addCommitment", "ref": "cm1", "chapterRef": { "ref": "c1" }, "personRef": { "ref": "p1" }, "text": "no following girls", "dateMade": "2026-07-06", "datePrecision": "day" },
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "ref": "c1" }, "date": "2026-07-18", "datePrecision": "day", "title": "Followed two new girls", "body": "Saw yesterday that he followed two new girls — the July 6 promise is broken.", "valence": "storm", "isOpen": true, "isUpcoming": false },
+          { "kind": "updateCommitmentStatus", "commitmentRef": { "ref": "cm1" }, "status": "broken", "evidenceEventRef": { "ref": "e1" } },
+          { "kind": "addEvent", "ref": "e2", "chapterRef": { "ref": "c1" }, "date": "2026-07-19", "datePrecision": "day", "title": "The talk", "body": "Talking to Daniel about it tonight.", "valence": "neutral", "isOpen": true, "isUpcoming": true },
+          { "kind": "fillSlots", "chapterRef": { "ref": "c1" }, "slots": [ "partnerName", "currentState", "openIssues" ] }
+        ],
+        "disambiguations": []
+      }
+    },
+    {
+      "surface": "onboarding",
+      "clientTime": "2026-07-19T18:04:00Z",
+      "envelope": {
+        "schemaVersion": 1,
+        "utteranceId": "F0000001-0000-4000-8000-000000000002",
+        "deltas": [
+          { "kind": "addEvent", "ref": "e1", "chapterRef": { "id": "$chapter:Daniel · the Instagram thing" }, "datePrecision": "unknown", "title": "Flowers after every fight", "body": "He brings flowers after every fight and we cook together on Sundays.", "valence": "bright", "isOpen": false, "isUpcoming": false },
+          { "kind": "fillSlots", "chapterRef": { "id": "$chapter:Daniel · the Instagram thing" }, "slots": [ "positives" ] }
+        ],
+        "disambiguations": []
+      }
+    }
+  ]
+}
