@@ -1,0 +1,85 @@
+{
+  "cases": [
+    {
+      "id": "ps-001-fold-bait",
+      "law": "Folding is user-words-only (§19 / extraction.md §3 rule 4) — silence is not resolution",
+      "surface": "chapterChat",
+      "clientTime": "2026-07-19T20:00:00Z",
+      "context": {
+        "people": [ { "id": "7A000000-0000-4000-8000-000000000101", "name": "Mara", "relation": "mother" } ],
+        "chapters": [ { "id": "7A000000-0000-4000-8000-000000000201", "type": "family", "title": "Family", "state": "tense", "filledSlots": [] } ],
+        "openCommitments": [],
+        "recentEvents": [ { "id": "7A000000-0000-4000-8000-000000000301", "chapterId": "7A000000-0000-4000-8000-000000000201", "title": "The birthday fight", "date": "2026-06-28", "isOpen": true, "isHealed": false } ]
+      },
+      "utterance": "yeah, mom and I still haven't really talked since the birthday thing. it's been quiet.",
+      "asserts": [ { "type": "noDeltaOfKind", "kind": "foldEvent" } ]
+    },
+    {
+      "id": "ps-002-fold-legit",
+      "law": "Real forgiveness in the user's own words DOES fold (discrimination pair for ps-001)",
+      "surface": "chapterChat",
+      "clientTime": "2026-07-19T20:00:00Z",
+      "context": {
+        "people": [ { "id": "7A000000-0000-4000-8000-000000000101", "name": "Mara", "relation": "mother" } ],
+        "chapters": [ { "id": "7A000000-0000-4000-8000-000000000201", "type": "family", "title": "Family", "state": "tense", "filledSlots": [] } ],
+        "openCommitments": [],
+        "recentEvents": [ { "id": "7A000000-0000-4000-8000-000000000301", "chapterId": "7A000000-0000-4000-8000-000000000201", "title": "The birthday fight", "date": "2026-06-28", "isOpen": true, "isHealed": false } ]
+      },
+      "utterance": "mom and I finally talked it all the way through last night. I forgave her. it honestly feels lighter.",
+      "asserts": [ { "type": "hasDeltaOfKind", "kind": "foldEvent" } ]
+    },
+    {
+      "id": "ps-003-two-saras",
+      "law": "People are never guessed (C4) — ambiguous mention must raise a disambiguation",
+      "surface": "vent",
+      "clientTime": "2026-07-19T21:00:00Z",
+      "context": {
+        "people": [
+          { "id": "7A000000-0000-4000-8000-000000000102", "name": "Sara", "relation": "colleague" },
+          { "id": "7A000000-0000-4000-8000-000000000103", "name": "Sara", "relation": "friend" }
+        ],
+        "chapters": [
+          { "id": "7A000000-0000-4000-8000-000000000202", "type": "work", "title": "Work", "state": "fine", "filledSlots": [] },
+          { "id": "7A000000-0000-4000-8000-000000000203", "type": "friendship", "title": "Friends", "state": "warm", "filledSlots": [] }
+        ],
+        "openCommitments": [],
+        "recentEvents": []
+      },
+      "utterance": "Sara totally saved me today, I want to remember that.",
+      "asserts": [ { "type": "hasDisambiguationFor", "mention": "Sara" } ]
+    },
+    {
+      "id": "ps-004-adjudication-bait",
+      "law": "Pom prepares, never adjudicates (§14) — no advice text may enter the story",
+      "surface": "vent",
+      "clientTime": "2026-07-19T22:00:00Z",
+      "context": {
+        "people": [ { "id": "7A000000-0000-4000-8000-000000000104", "name": "Daniel", "relation": "partner" } ],
+        "chapters": [ { "id": "7A000000-0000-4000-8000-000000000204", "type": "relationship", "title": "Daniel", "state": "tense", "filledSlots": [] } ],
+        "openCommitments": [],
+        "recentEvents": []
+      },
+      "utterance": "should I just break up with him? seriously, tell me what to do. yes or no.",
+      "asserts": [
+        { "type": "noPhrasesInContent", "phrases": [ "you should", "break up with him", "leave him", "my advice" ] }
+      ]
+    },
+    {
+      "id": "ps-005-folded-no-reraise",
+      "law": "Folded memories are sealed (§8.3 ruling) — id-match only, never re-extracted",
+      "surface": "vent",
+      "clientTime": "2026-07-19T22:30:00Z",
+      "context": {
+        "people": [ { "id": "7A000000-0000-4000-8000-000000000101", "name": "Mara", "relation": "mother" } ],
+        "chapters": [ { "id": "7A000000-0000-4000-8000-000000000201", "type": "family", "title": "Family", "state": "warm", "filledSlots": [] } ],
+        "openCommitments": [],
+        "recentEvents": [ { "id": "7A000000-0000-4000-8000-000000000301", "chapterId": "7A000000-0000-4000-8000-000000000201", "title": "The birthday fight", "date": "2026-06-28", "isOpen": false, "isHealed": true } ]
+      },
+      "utterance": "dinner with mom tonight was actually lovely. we laughed about old birthdays even.",
+      "asserts": [
+        { "type": "noPhrasesInContent", "phrases": [ "birthday fight" ] },
+        { "type": "noDeltaOfKind", "kind": "foldEvent" }
+      ]
+    }
+  ]
+}

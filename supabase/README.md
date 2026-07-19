@@ -42,6 +42,24 @@ only — no conversation table will ever exist here.
   first migration) that auto-enables RLS on any new `public` table — a safety net under C2, not
   a substitute for writing owner policies on every new table.
 
+## Edge Functions — `extract` (the AI proxy, C5; M1)
+
+Code: `supabase/functions/extract/` (reviewed under M1-CONTRACTS §3). Deploy via
+**`scripts/deploy-extract.sh`** — it regenerates `prompts.gen.ts` from `prompts/extract/` first,
+so the deployed prompt can never drift from the repo. `verify_jwt` stays **ON** (never deploy
+with `--no-verify-jwt`).
+
+- **Server config (secrets, never in any repo):** `ANTHROPIC_API_KEY` (👤 provisioning item 2 —
+  written no-training confirmation gates the milestone close) and `EXTRACT_MODEL_ID`
+  (`claude-haiku-4-5`, F4/§8.1). `supabase secrets set … --project-ref biwwvntcofpjjbqvfkby`.
+- **C2 log contract (code-reviewed):** log lines carry utteranceId, timing, token counts, model
+  id, prompt version, error codes, delta COUNT — never utterance, context, or delta content.
+  Adding a logged field = contract review.
+- **In-memory only:** no table backs this function; request content lives for the duration of
+  the call. `schema_mismatch` (409) enforces server-led schema evolution (§8.4).
+- **Status:** code landed 2026-07-19; deploy + secrets are run from Xavier's Supabase terminal;
+  the fx-001 live smoke test (M1-CONTRACTS §7.5) closes the loop once the key exists.
+
 ## Deliberately NOT deployed (deferred to their contract packages)
 
 - **Check-in derived metadata** (upcoming/open event dates × prefs the M6 engine scans) —
@@ -49,8 +67,6 @@ only — no conversation table will ever exist here.
 - **AI usage counters / free-tier vent caps** — shape depends on the M1 proxy contract (and
   F8 monetization); must stay content-free when it lands.
 - **Entitlement mirror tables** (Superwall/StoreKit, M8) — `docs/monetization.md` owns this.
-- **Edge Functions (the AI proxy)** — M1, after `docs/extraction.md` + M1-CONTRACTS review;
-  log config is code-reviewed under C2 (never persist, never log content).
 - **Auth provider config** (Sign in with Apple + magic link) — dashboard config, Xavier-owned
   per `docs/PROVISIONING.md` item 1.3.
 
