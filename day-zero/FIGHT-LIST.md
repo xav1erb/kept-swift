@@ -30,6 +30,11 @@
   (no-training tier confirmation in writing) · Apple Developer setup (bundle id, signing, ASC record,
   APNs key). Telegram loop pings: not provisioned — loop runs without pings for now.
   Checklist: `docs/PROVISIONING.md`.
+- **Code naming = Kept** (target/module `Kept`, bundle id `com.kept.app`). Ruled 2026-07-19;
+  LEXICON graveyard entry filed. "Keeper"/"Pom" remain doc placeholders until F5.
+- **M0-CONTRACTS approved** 2026-07-19 with five rulings (`day-zero/M0-CONTRACTS.md` §8):
+  swift-dependencies at M0 · snapshot testing at M0 · fetch-or-create singletons · stub palettes OK ·
+  Dimension config → M3-CONTRACTS.
 
 ## Open
 

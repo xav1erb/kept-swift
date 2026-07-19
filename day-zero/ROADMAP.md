@@ -16,7 +16,7 @@ The plan is a **dependency sequence, not a calendar.**
 
 ## Milestones
 
-### M0 — Foundations `☐` (gates closed: F2 SwiftData, F11 no-@Query)
+### M0 — Foundations `◐` (contract APPROVED + built 2026-07-19; device-verify checklist 👤 pending)
 Design tokens + theming engine (6 themes as semantic tokens, live re-skin proven with a test screen),
 Fraunces + Quicksand bundled, nav shell (5-slot bar, Pom center button), Route/Router, data model (§3)
 in the encrypted store behind `Services/Store/`, XcodeGen project.

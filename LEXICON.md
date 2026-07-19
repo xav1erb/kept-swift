@@ -88,4 +88,7 @@ system-prompt layer, changeable anytime, even per chapter. **Not** a TTS voice.
 
 ## Graveyard
 
-*(empty — F5 renames will land here with dates and reasoning)*
+**Keeper (code naming)** — retired 2026-07-19, at scaffold time. Xavier ruled the Swift naming
+convention is **Kept**: target `Kept`, module `Kept`, bundle id `com.kept.app` (matches the repo,
+kept-swift). "Keeper" survives only as the docs' product-name placeholder until F5 closes; "Pom"
+unchanged.
