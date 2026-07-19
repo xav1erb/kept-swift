@@ -1,0 +1,30 @@
+# Xcode / Swift
+build/
+DerivedData/
+*.xcodeproj
+!project.yml
+xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+.swiftpm/
+.build/
+
+# Secrets — never in the repo (C2/C5)
+.env
+.env.*
+*.p8
+*.pem
+AppSecrets.swift
+.superwall/
+supabase/.temp/
+**/secrets.*
+
+# OS / tools
+.DS_Store
+*.log
+.loop/state/
+node_modules/
