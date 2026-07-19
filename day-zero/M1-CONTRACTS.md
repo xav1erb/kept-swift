@@ -1,13 +1,14 @@
 # M1-CONTRACTS — Extraction pipeline + backend proxy (the heart)
 
-<!-- CONTRACT PACKAGE (NN#2): reviewed BEFORE M1 code. STATUS: DRAFT — awaiting Xavier's review,
-     together with docs/extraction.md (THE spec — this package implements it). Covers seams #1
+<!-- CONTRACT PACKAGE (NN#2): reviewed BEFORE M1 code. STATUS: APPROVED by Xavier 2026-07-19,
+     together with docs/extraction.md (THE spec — this package implements it). §8 rulings recorded
+     below; §8.3 ruled AGAINST the draft (folded events are included, flagged). Covers seams #1
      (schema/merge — in extraction.md), #3 (prompt stack + softness filter), #4 (server schema).
      Gates: F1 Supabase, F3 transient-plaintext, F4 Claude split-tier — all closed.
-     👤 BLOCKED ON PROVISIONING items 1–2 (Supabase project; Anthropic key with WRITTEN
-     no-training confirmation — a C2 contractual gate). M0 (store + data model) must land first:
-     the merge writes into M0's store. API facts verified against the current Claude API reference
-     2026-07-19 (structured outputs, model ids, caching semantics). -->
+     👤 STILL OPEN: PROVISIONING item 2 (Anthropic key with WRITTEN no-training confirmation — a C2
+     contractual gate; blocks §7.5 live smoke test + milestone close, not the headless build).
+     M0 landed 2026-07-19. API facts verified against the current Claude API reference 2026-07-19
+     (structured outputs, model ids, caching semantics). -->
 
 ## 1. Scope
 
@@ -84,8 +85,8 @@ ExtractionContext {
   people:      [{ id, name, relation }]                     // known people, for id-matching
   chapters:    [{ id, type, title, state, filledSlots }]    // so fillSlots/upserts target correctly
   openCommitments: [{ id, personId?, text, dateMade }]      // for status transitions
-  recentEvents:    [{ id, chapterId, title, date, isOpen }] // last N, folded EXCLUDED (v1 — §8.3)
-}
+  recentEvents:    [{ id, chapterId, title, date, isOpen, isHealed }] // last N, folded INCLUDED,
+}                                                           // flagged (§8.3 ruling)
 ```
 
 Prompt layers, assembled server-side per whitepaper §14 — templates live in `prompts/`, versioned:
@@ -101,10 +102,14 @@ Layers 1–3 are our static text — cacheable, cache-safe, and shared across al
 contain user life-content and are **never cached** (an ephemeral provider-side cache entry of user
 context would blur "processed, not stored"; we simply don't create one).
 
-**The C3 filter is structural, both sides:** the client context builder cannot include folded
-events (the read model it draws from excludes `isHealed == true` at the type level); when M4 adds
-chat context (where folded items ARE needed for reasoning), they carry the `do-not-raise-unprompted`
-flag added at prompt assembly — a code path with a prompt-suite test, never a model instruction alone.
+**The C3 filter is structural (§8.3 ruling, 2026-07-19):** folded events travel in the extraction
+context WITH `isHealed: true` — so an utterance referencing a folded memory id-matches instead of
+re-extracting a duplicate. Safety is held by the schema, not the flag alone: the delta vocabulary
+contains no unfold and no destructive op (extraction.md §1), so the worst a model can do with a
+folded event is reference its id. The prompt's folded-events rule (match, never re-raise, never
+re-open) is layer-1 static text with a prompt-suite case; when M4 adds chat context the same
+`isHealed` flag drives the `do-not-raise-unprompted` rule at prompt assembly — a code path with a
+prompt-suite test, never a model instruction alone.
 
 ## 5. Server schema (seam #4) — BASELINE DEPLOYED 2026-07-19
 
@@ -143,18 +148,38 @@ Remaining for M1/M2 sync-seam review (amendments only through contract review): 
 Device-verify: none — M1 is deliberately headless (mic/UI come later). LOOP: once this package +
 extraction.md are ratified, the merge engine, scoring, and decoders are loop-safe work items.
 
-## 8. Open questions (rulings needed with this review)
+## 8. Rulings (Xavier, 2026-07-19 — this review)
 
-1. **Model ids:** pin `claude-haiku-4-5` (extract) now, `claude-sonnet-5` reserved for M4 chat —
-   both as server env config. Confirm the tier→id mapping.
-2. **Blob upload timing:** DB schema deploys at M1 (above), but the client encrypt-and-upload path
-   + master-key creation land with the M2 sign-in slice ("sign-in attaches backup"). Confirm — the
-   alternative (headless upload at M1) builds sync before auth exists to scope it.
-3. **Folded events in extraction context:** excluded in v1 (§4). Cost: an utterance referencing a
-   folded memory re-extracts it as new. Mitigation deferred to M4 chat context. Confirm.
-4. **Schema evolution:** proposal — `schemaVersion` bumps are server-led; client sends its version,
-   proxy answers in that version or returns `schema_mismatch` (forcing app update), never silently
-   translates. Confirm.
-5. **Onboarding acknowledgments** (Pom's AI-generated bubbles between fixed questions, M2): propose
-   a separate light `acknowledge` endpoint contract drafted in M2-CONTRACTS (voice register is a
-   human-ruled seam), not smuggled into `extract`. Confirm.
+1. **Model ids — CONFIRMED.** `claude-haiku-4-5` (extract) pinned now, `claude-sonnet-5` reserved
+   for M4 chat — both as server env config (`EXTRACT_MODEL_ID`), never in the client.
+2. **Blob upload timing — DEFERRED TO M2.** DB schema is deployed (§5); the client
+   encrypt-and-upload path + master-key creation land with the M2 sign-in slice ("sign-in attaches
+   backup").
+3. **Folded events in extraction context — INCLUDED, FLAGGED (overrides the draft).** Folded
+   events travel with `isHealed: true` from M1 so folded memories id-match instead of duplicating.
+   Structural safety analysis in §4; prompt-suite case required.
+4. **Schema evolution — CONFIRMED server-led.** Client sends its `schemaVersion`; the proxy
+   answers in that version or returns `schema_mismatch` (forcing an app update), never silently
+   translates.
+5. **Onboarding acknowledgments — CONFIRMED separate.** A light `acknowledge` endpoint contract is
+   drafted in M2-CONTRACTS (voice register is a human-ruled seam), not smuggled into `extract`.
+
+### Amendments made at ratification (mechanical, no scope change)
+
+- **Disambiguation carries a binding `ref`** (extraction.md §1): the ambiguous mention gets a local
+  handle so held deltas have an exact binding target at resolution — the wire needs it; prose
+  alone couldn't say *which* deltas were held.
+- **`upsertPerson.chapterRefs` (attach-only)** — the delta vocabulary had no person↔chapter link;
+  fx-001 requires it. Attach-only keeps the vocabulary non-destructive (detach = user action).
+- **`updateCommitmentStatus.commitmentRef` takes id or ref** (was id-only) — a promise disclosed
+  and broken in one utterance must be status-updatable inside its own envelope (fx-001).
+- **Structured census answers** (name/age/city/occupation/fork chips + fields) write via typed
+  `KeptStore` commands — C1 governs *utterances*; a chip tap is not an utterance. Free-text
+  answers go through extraction unchanged.
+- **The proxy stamps envelope identity** (`schemaVersion` + `utteranceId` echoed from the request,
+  C4-consistent): the model's structured output is only `{deltas, disambiguations}` — a
+  per-request `const` in the output schema would defeat grammar caching for zero safety gain.
+- **Merge-engine storage:** `Chapter.filledSlots`, `Event.healedReason`, plus two internal models —
+  `AppliedUtterance` (idempotency record, spec §3 rule 1) and `HeldDeltaBatch` (persisted
+  disambiguation queue, spec §2 atomicity exception). All behind `Services/Store/` (C7); none
+  surface in read models except `filledSlots` (context assembly needs it).

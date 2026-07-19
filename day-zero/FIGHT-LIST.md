@@ -35,6 +35,11 @@
 - **M0-CONTRACTS approved** 2026-07-19 with five rulings (`day-zero/M0-CONTRACTS.md` §8):
   swift-dependencies at M0 · snapshot testing at M0 · fetch-or-create singletons · stub palettes OK ·
   Dimension config → M3-CONTRACTS.
+- **M0 done** — device-verify confirmed by Xavier 2026-07-19; ROADMAP flipped ☑.
+- **M1-CONTRACTS approved + extraction.md RATIFIED** 2026-07-19 with five rulings
+  (`day-zero/M1-CONTRACTS.md` §8): model ids pinned (haiku-4-5 extract / sonnet-5 M4) · blob upload
+  → M2 sign-in slice · **folded events INCLUDED flagged in extraction context (overrides draft)** ·
+  server-led schemaVersion · `acknowledge` endpoint → M2-CONTRACTS.
 
 ## Open
 

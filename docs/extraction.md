@@ -1,10 +1,11 @@
 # Kept — Extraction: THE spec
 
-<!-- THE load-bearing spec (APPROACH: "the signal-score.md of this app"). STATUS: DRAFT — the
-     extraction schema + merge rules are the #1 human-owned seam (NN#9); nothing here is built
-     until Xavier approves this document with the M1-CONTRACTS package. Sources: whitepaper §3/§14,
-     C1/C3/C4, F4 (Claude split-tier), F11. Wire format is the contract between the proxy and the
-     client; the Swift Codable types in M1-CONTRACTS mirror it 1:1. -->
+<!-- THE load-bearing spec (APPROACH: "the signal-score.md of this app"). STATUS: RATIFIED by
+     Xavier 2026-07-19 with the M1-CONTRACTS package (§8 rulings recorded there; folded events are
+     INCLUDED in extraction context, flagged `isHealed` — §8.3 ruling). The extraction schema +
+     merge rules are the #1 human-owned seam (NN#9); amendments only through contract review.
+     Sources: whitepaper §3/§14, C1/C3/C4, F4 (Claude split-tier), F11. Wire format is the contract
+     between the proxy and the client; the Swift Codable types mirror it 1:1. -->
 
 ## 0. The one pipeline (C1)
 
@@ -51,12 +52,12 @@ Softness and safety are structural (C3): the model cannot propose what the schem
 
 | kind | payload | notes |
 |---|---|---|
-| `upsertPerson` | `ref` XOR `id`, `name`, `relation?`, `mood?`, `roleFlags?[]`, `rituals?[]`, `notesAppend?` | `notesAppend` appends — never replaces the profile. New-person path is gated (§3). |
+| `upsertPerson` | `ref` XOR `id`, `name`, `relation?`, `mood?`, `roleFlags?[]`, `rituals?[]`, `notesAppend?`, `chapterRefs?[]` | `notesAppend` appends — never replaces the profile. `chapterRefs` is **attach-only** (ratification amendment — the wire needs person↔chapter linking; detachment is a user action, never a delta). New-person path is gated (§3). |
 | `upsertChapter` | `ref` XOR `id`, `type`, `chapterKind`, `title?`, `iconRef?`, `state?` | `title` in the user's words (whitepaper); model may propose, merge stamps `createdAt`/`lastTouchedAt`. |
 | `addEvent` | `ref`, `chapterRef`, `date?`, `datePrecision`, `title`, `body`, `valence`, `isOpen`, `isUpcoming` | `source` is NOT model-set — the client stamps it from the surface that sent the utterance. |
 | `foldEvent` | `eventId`, `reason` | Proposes `isHealed = true`. **One-way**: there is no unfold kind — unfolding/refolding is a user tap only. Applied only when the user's own words indicate resolution (fixture-tested). |
 | `addCommitment` | `ref`, `chapterRef`, `personRef?`, `text`, `dateMade?`, `datePrecision` | "Receipts matter": `dateMade` = stated date if given, else the merge stamps utterance date with `datePrecision: "day"`. |
-| `updateCommitmentStatus` | `commitmentId`, `status`, `evidenceEventRef?` | held → broken/resolved transitions; evidence links to an event in this envelope or the store. |
+| `updateCommitmentStatus` | `commitmentRef`, `status`, `evidenceEventRef?` | held → broken/resolved transitions; evidence links to an event in this envelope or the store. `commitmentRef` takes id or ref (ratification amendment): a promise disclosed and broken in ONE utterance must be status-updatable inside its own envelope (fx-001). |
 | `upsertGoal` | `ref` XOR `id`, `chapterRef?`, `text`, `targetDate?`, `progressNote?` | |
 | `setChapterState` | `chapterRef`, `state` | warm/fine/quiet/tense/complicated — the soft vocabulary only. |
 | `setPersonMood` | `personRef`, `mood` | includes `drifting`. |
@@ -70,13 +71,16 @@ falls back to utterance date at `day` precision.
 ### Disambiguation (the C4 gate)
 
 ```json
-{ "mention": "Sara", "candidateIds": ["<uuid>", "<uuid>"], "question": "work-Sara, not Instagram-Sara, right?" }
+{ "ref": "p1", "mention": "Sara", "candidateIds": ["<uuid>", "<uuid>"], "question": "work-Sara, not Instagram-Sara, right?" }
 ```
 
-- Any delta whose person reference is the ambiguous mention is **held**, not applied — parked in a
-  pending queue keyed by `utteranceId`. Everything else in the envelope applies normally.
+- The ambiguous person is assigned a local `ref` like any created entity; the disambiguation
+  carries that `ref` as its **binding handle** (ratification amendment — the wire needs an exact
+  target for resolution). Any delta referencing that `ref` is **held**, not applied — parked in a
+  pending queue keyed by `utteranceId` + `ref`. Everything else in the envelope applies normally.
 - The question is asked in Pom's voice on the originating surface; the user's answer resolves the
-  held deltas (existing id or confirmed-new), which then merge.
+  held deltas — binds the `ref` to an existing person id, or confirms a new person — which then
+  merge.
 - **Deterministic backstop:** even when the model does NOT flag it, the merge refuses to create a
   new `Person` whose normalized name matches an existing person — it converts that creation into a
   disambiguation itself. Two Saras can never silently merge or silently duplicate; the model's

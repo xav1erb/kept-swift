@@ -16,14 +16,14 @@ The plan is a **dependency sequence, not a calendar.**
 
 ## Milestones
 
-### M0 — Foundations `◐` (contract APPROVED + built 2026-07-19; device-verify checklist 👤 pending)
+### M0 — Foundations `☑` (built 2026-07-19; device-verify confirmed by Xavier 2026-07-19)
 Design tokens + theming engine (6 themes as semantic tokens, live re-skin proven with a test screen),
 Fraunces + Quicksand bundled, nav shell (5-slot bar, Pom center button), Route/Router, data model (§3)
 in the encrypted store behind `Services/Store/`, XcodeGen project.
 **Done =** theme switch re-skins a sample screen live; models round-trip through the encrypted store;
 app-lock scaffold present.
 
-### M1 — Extraction pipeline + backend proxy (the heart) `☐` (gates closed: F1 Supabase, F3 transient-plaintext, F4 Claude split-tier) 👤 needs PROVISIONING items 1–2
+### M1 — Extraction pipeline + backend proxy (the heart) `◐` (contracts APPROVED + spec RATIFIED 2026-07-19; 👤 live smoke test + milestone close need PROVISIONING item 2)
 `docs/extraction.md` FIRST (delta schema, merge rules, disambiguation gate, awareness scoring).
 Backend proxy up (prompt assembly server-side, no-training tier verified); utterance → deltas →
 deterministic merge → store; person disambiguation; awareness % per chapter-type schema; the
