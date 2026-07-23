@@ -40,7 +40,7 @@ scaffold + progress bar, resumable draft store, RootView gate), adapted: local e
 primary, sign-in last attaches backup.
 **Done =** the 11 acceptance checks in `docs/onboarding.md` §13 pass on device in both fork modes.
 
-### M3 — World globe + new chapter `☐` (F7: whitepaper-driven brand identity; Figma 1:1 protocol activates when the file lands)
+### M3 — World globe + new chapter `◐` (contracts APPROVED + headless build GREEN 2026-07-23, 93 tests; 👤 remaining: device-verify M3-CONTRACTS §6.8 — drag/idle feel, depth legibility, 60fps on hardware)
 GlobeKit 2.5D engine (orbit math, drag, idle spin, depth scale/opacity/z-order), pins with awareness
 rings + state sublines, streak chip, next-up card; new-chapter grid with per-type scripted sequences
 (sensitive types: no question counts — never-test).

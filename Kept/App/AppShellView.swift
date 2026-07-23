@@ -29,10 +29,7 @@ struct AppShellView: View {
     private func surface(for tab: KeptTab) -> some View {
         switch tab {
         case .world:
-            SurfacePlaceholder(
-                title: "your world ✨",
-                state: .empty(message: "Your world is on its way — the globe lands at M3. Nothing here is lost, just not yet built.")
-            )
+            WorldView()
         case .river:
             SurfacePlaceholder(
                 title: "the River",
@@ -61,6 +58,8 @@ struct AppShellView: View {
                 title: "tending your world",
                 state: .empty(message: "The soft streak page lands at M7 — one protected rest day a week. 🌙")
             )
+        case .newChapter:
+            NewChapterView()
         }
     }
 }

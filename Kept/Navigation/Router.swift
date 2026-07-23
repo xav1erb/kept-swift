@@ -5,6 +5,7 @@ import Observation
 enum Route: Hashable, Sendable {
     case chapter(UUID)
     case streak
+    case newChapter
 }
 
 /// The five-slot bar's tabs. Tell Pom is not a tab — it is the center button (a sheet).
@@ -21,7 +22,7 @@ final class Router {
     var isTellPomPresented = false
 
     /// Supported: kept://world|river|wins|you, kept://tellpom,
-    /// kept://chapter/<uuid>, kept://streak
+    /// kept://chapter/<uuid>, kept://streak, kept://newchapter
     @discardableResult
     func open(deepLink url: URL) -> Bool {
         guard url.scheme == "kept", let host = url.host() else { return false }
@@ -39,6 +40,9 @@ final class Router {
         case "streak":
             select(.world)
             path = [.streak]
+        case "newchapter":
+            select(.world)
+            path = [.newChapter]
         default:
             return false
         }

@@ -7,6 +7,7 @@ struct KeptApp: App {
     @State private var router = Router()
     @State private var appLock = AppLockModel()
     @State private var onboarding: OnboardingModel
+    @State private var newChapter: NewChapterModel
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -32,6 +33,7 @@ struct KeptApp: App {
                 extraction: extraction,
                 masterKey: KeychainMasterKey()
             ))
+            _newChapter = State(initialValue: NewChapterModel(store: store, extraction: extraction))
             _themeModel = State(initialValue: ThemeModel(
                 theme: ((try? store.userProfile())?.theme) ?? .cloudCream
             ))
@@ -50,6 +52,7 @@ struct KeptApp: App {
                 .environment(router)
                 .environment(appLock)
                 .environment(onboarding)
+                .environment(newChapter)
                 .onOpenURL { url in
                     if url.host() == "auth-callback" {
                         Task { await onboarding.handleAuthCallback(url: url) }

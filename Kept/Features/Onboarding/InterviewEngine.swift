@@ -1,11 +1,11 @@
 import Foundation
 import UserNotifications
 
-// The interview sub-machine (M2-CONTRACTS §2/§3). Walks InterviewScript deterministically:
-// chips/fields → typed store commands the moment they're given; free text → the PendingUtterance
-// queue (§8.1 — extraction runs at sign-in). Branching is a pure function of the answers map, so
-// resume rebuilds the exact position from the persisted draft. Skips write nothing, queue
-// nothing, and Pom never comments (§13.10).
+// The scripted-chat runner (M2-CONTRACTS §2/§3; generalized at M3 §8 A2). Walks ANY
+// InterviewScriptProviding deterministically: chips/fields → typed store commands the moment
+// they're given; free text → the PendingUtterance queue (C1 — the one write path). Branching is
+// a pure function of the answers map, so resume rebuilds the exact position from the persisted
+// draft. Skips write nothing, queue nothing, and Pom never comments (§13.10).
 
 protocol NotificationPermissionRequesting: AnyObject {
     /// The iOS system prompt — called ONLY after an explicit Yes chip (pre-permission pattern).
@@ -33,6 +33,7 @@ final class InterviewEngine {
 
     private let store: KeptStore
     private let notifications: any NotificationPermissionRequesting
+    private let script: any InterviewScriptProviding
 
     private(set) var bubbles: [DraftBubble] = []
     private(set) var currentNode: InterviewNode?
@@ -44,16 +45,25 @@ final class InterviewEngine {
     /// Skipped chip id marker — never written anywhere, only used for branch decisions.
     private static let skipMarker = "\u{0}skip"
 
-    init(store: KeptStore, notifications: any NotificationPermissionRequesting = LiveNotificationPermission()) {
+    init(
+        store: KeptStore,
+        notifications: any NotificationPermissionRequesting = LiveNotificationPermission(),
+        script: any InterviewScriptProviding = OnboardingScript()
+    ) {
         self.store = store
         self.notifications = notifications
+        self.script = script
     }
 
     // MARK: - Lifecycle
 
     func start() {
         guard currentNode == nil, !isComplete else { return }
-        show(node: InterviewScript.q1Name)
+        if let first = script.firstNode(answers: answers) {
+            show(node: first)
+        } else {
+            isComplete = true
+        }
     }
 
     /// Rebuild from the persisted draft (kill/relaunch mid-interview, §13.6).
@@ -71,8 +81,7 @@ final class InterviewEngine {
 
     /// Fraction of the active path consumed — drives the interview's progress segment.
     var progress: Double {
-        let estimated = answers[InterviewScript.q2Fork.id] == InterviewScript.fullModeChip.id ? 15.0 : 13.0
-        return min(1.0, Double(answers.count) / estimated)
+        script.progress(answers: answers)
     }
 
     // MARK: - Input
@@ -143,7 +152,7 @@ final class InterviewEngine {
                     stateChip: chip
                 )
             case .utterance:
-                try store.enqueueUtterance(surface: .onboarding, nodeId: node.id, text: answer)
+                try store.enqueueUtterance(surface: script.utteranceSurface, nodeId: node.id, text: answer)
             case .notificationChoice:
                 if answer == "yes" {
                     _ = await notifications.requestAuthorization()
@@ -168,73 +177,26 @@ final class InterviewEngine {
     }
 
     private func nextNode() -> InterviewNode? {
-        let mode: OnboardingMode = answers[InterviewScript.q2Fork.id] == InterviewScript.fullModeChip.id ? .full : .focus
-        let statusChip = answers[InterviewScript.q4Status.id]
-        let hasRelationship = ["yes", "married", "complicated"].contains(statusChip ?? "")
-
-        if answers[InterviewScript.q1Name.id] == nil { return InterviewScript.q1Name }
-        if answers[InterviewScript.q2Fork.id] == nil { return InterviewScript.q2Fork }
-        if answers[InterviewScript.q3Age.id] == nil { return InterviewScript.q3Age }
-        if answers[InterviewScript.q3City.id] == nil { return InterviewScript.q3City }
-        if answers[InterviewScript.q3OccupationKind.id] == nil { return InterviewScript.q3OccupationKind }
-        if ["work", "school", "both"].contains(answers[InterviewScript.q3OccupationKind.id] ?? ""),
-           answers[InterviewScript.q3OccupationDetail.id] == nil {
-            return InterviewScript.q3OccupationDetail
-        }
-        if statusChip == nil { return InterviewScript.q4Status }
-        if hasRelationship {
-            if answers[InterviewScript.q4PartnerName.id] == nil { return InterviewScript.q4PartnerName }
-            if answers[InterviewScript.q4Duration.id] == nil { return InterviewScript.q4Duration }
-            if answers[InterviewScript.q4State.id] == nil { return InterviewScript.q4State }
-            if let stateAnswer = answers[InterviewScript.q4State.id],
-               let chip = RelationshipStateChip(rawValue: stateAnswer), chip.isNegative,
-               answers[InterviewScript.q4Followup.id] == nil {
-                return InterviewScript.q4Followup
-            }
-            if answers[InterviewScript.q6Positive.id] == nil { return InterviewScript.q6Positive }
-        }
-        switch mode {
-        case .focus:
-            if hasRelationship {
-                for (slot, prompt) in InterviewScript.deepDiveQuestions(for: .relationship) {
-                    let node = InterviewScript.deepDiveNode(slot: slot, prompt: prompt)
-                    if answers[node.id] == nil, !censusFilledSlots().contains(slot) {
-                        return node
-                    }
-                }
-            }
-        case .full:
-            for node in InterviewScript.fullCensusNodes where answers[node.id] == nil {
-                return node
-            }
-        }
-        if answers[InterviewScript.q8Notifications.id] == nil { return InterviewScript.q8Notifications }
-        if answers[InterviewScript.q9Close.id] == nil { return InterviewScript.q9Close }
-        return nil
+        script.nextNode(answers: answers, filledSlots: filledSlots())
     }
 
     private func node(for id: String) -> InterviewNode? {
-        let fixed: [InterviewNode] = [
-            InterviewScript.q1Name, InterviewScript.q2Fork, InterviewScript.q3Age,
-            InterviewScript.q3City, InterviewScript.q3OccupationKind, InterviewScript.q3OccupationDetail,
-            InterviewScript.q4Status, InterviewScript.q4PartnerName, InterviewScript.q4Duration,
-            InterviewScript.q4State, InterviewScript.q4Followup, InterviewScript.q6Positive,
-            InterviewScript.q8Notifications, InterviewScript.q9Close,
-        ] + InterviewScript.fullCensusNodes
-        if let match = fixed.first(where: { $0.id == id }) { return match }
-        for type in ChapterType.allCases {
-            for (slot, prompt) in InterviewScript.deepDiveQuestions(for: type)
-            where "q7-deepdive-\(slot)" == id {
-                return InterviewScript.deepDiveNode(slot: slot, prompt: prompt)
-            }
-        }
-        return nil
+        script.node(for: id)
     }
 
-    private func censusFilledSlots() -> [String] {
-        (try? store.chapterSummaries().first(where: { $0.type == .relationship })).flatMap { summary in
-            try? store.extractionContext().chapters.first(where: { $0.id == summary.id })?.filledSlots
-        } ?? []
+    /// Already-filled awareness slots for the script's chapter — a filled slot is never re-asked.
+    private func filledSlots() -> [String] {
+        let chapterId: UUID?
+        switch script.slotSource {
+        case .none:
+            return []
+        case .relationshipCensus:
+            chapterId = (try? store.chapterSummaries())?.first(where: { $0.type == .relationship })?.id
+        case .chapter(let id):
+            chapterId = id
+        }
+        guard let chapterId else { return [] }
+        return (try? store.extractionContext().chapters.first(where: { $0.id == chapterId })?.filledSlots) ?? []
     }
 
     // MARK: - Transcript
@@ -261,7 +223,10 @@ final class InterviewEngine {
     }
 
     private func substitute(_ text: String) -> String {
-        let name = cleanAnswer(InterviewScript.q1Name.id) ?? ""
+        // Chapter sequences run post-onboarding: {name} comes from the profile, not the answers.
+        let name = cleanAnswer(InterviewScript.q1Name.id)
+            ?? ((try? store.userProfile())?.name).flatMap { $0.isEmpty ? nil : $0 }
+            ?? ""
         let partner = cleanAnswer(InterviewScript.q4PartnerName.id) ?? "them"
         return text
             .replacingOccurrences(of: "{name}", with: name.isEmpty ? "friend" : name)

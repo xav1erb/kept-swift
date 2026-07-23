@@ -52,6 +52,18 @@
   flush idempotency, F10/F6 behaviors + never-scans, envelope/restore crypto, end-to-end flow
   incl. the returning-account restore path). Milestone close gated on the §9.7 device checklist
   (👤 provisioning items 1.3 + 3, anon key).
+- **M3-CONTRACTS approved** 2026-07-23 with four rulings (`day-zero/M3-CONTRACTS.md` §8):
+  new-chapter sequence = shared `InterviewEngine` behind a script-provider seam (C1, no second
+  runner) · Next-up line = typed template in-app (cached model phrase = an M6 decision) · pin tap
+  → straight to `Route.chapter(id)`, preview sheet moved to M4 · idle spin ON + Reduce Motion honor.
+  Amendments: `ChapterSummary` += priority/createdAt · C9 wall = source-scan test (single target).
+- **M3 headless build green** 2026-07-23 (93 tests / 16 suites: orbit golden values + determinism,
+  the C9 store-blind scan, grade mapping + exact sublines, next-up selection, resting-never-pulses
+  + guilt-free copy bank + sensitive-no-count never-tests, router, live ring re-grade, and the
+  "done" check — a chapter built via its sequence lands on the world at the right grade through
+  the real pipeline). Incident absorbed: blob-interior dates were iso8601-lossy → `.deferredToDate`
+  (M2-CONTRACTS §7.3 amendment, pre-first-blob; Store CLAUDE.md gotcha logged). Close gated on the
+  §6.8 device checklist (drag/idle feel, 60fps).
 
 ## Open
 
