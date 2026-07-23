@@ -106,9 +106,23 @@ final class KeptStore {
                 id: chapter.id, type: chapter.type, chapterKind: chapter.chapterKind,
                 title: chapter.title, iconRef: chapter.iconRef, state: chapter.state,
                 awarenessPct: chapter.awarenessPct, isResting: chapter.isResting,
-                personIds: chapter.people.map(\.id).sorted { $0.uuidString < $1.uuidString }
+                personIds: chapter.people.map(\.id).sorted { $0.uuidString < $1.uuidString },
+                priority: chapter.priority, createdAt: chapter.createdAt,
+                lastTouchedAt: chapter.lastTouchedAt
             )
         }
+    }
+
+    /// Every upcoming event across chapters — feeds the World's Next-up pick (M3 §4: typed
+    /// selection, C4). Deterministic order: date, then id (Store CLAUDE.md 2026-07-23 gotcha).
+    func upcomingEvents() throws -> [EventSnapshot] {
+        let descriptor = FetchDescriptor<Event>(
+            predicate: #Predicate { $0.isUpcoming == true },
+            sortBy: [SortDescriptor(\.date)]
+        )
+        return try context.fetch(descriptor)
+            .sorted { ($0.date, $0.id.uuidString) < ($1.date, $1.id.uuidString) }
+            .map(Self.snapshot(of:))
     }
 
     func people() throws -> [PersonSnapshot] {
@@ -592,7 +606,10 @@ final class KeptStore {
     }
 
     private func fetchAllChapters() throws -> [Chapter] {
+        // Same-instant createdAt ties need the deterministic tiebreak (Store CLAUDE.md
+        // 2026-07-23) — restore re-inserts in arbitrary order.
         try context.fetch(FetchDescriptor<Chapter>(sortBy: [SortDescriptor(\.createdAt)]))
+            .sorted { ($0.createdAt, $0.id.uuidString) < ($1.createdAt, $1.id.uuidString) }
     }
 
     private func fetchChapter(_ id: UUID) throws -> Chapter {

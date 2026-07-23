@@ -56,6 +56,11 @@ struct ChapterSummary: Equatable, Sendable, Identifiable {
     let awarenessPct: Int
     let isResting: Bool
     let personIds: [UUID]
+    /// M3-CONTRACTS §8 A1: the globe's deterministic longitude rule sorts on priority then
+    /// createdAt; recent-chapter cards sort on lastTouchedAt. All stored, never recomputed (C6).
+    let priority: Int
+    let createdAt: Date
+    let lastTouchedAt: Date
 }
 
 struct PersonSnapshot: Equatable, Sendable, Identifiable {
