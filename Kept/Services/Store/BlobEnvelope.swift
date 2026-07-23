@@ -50,7 +50,11 @@ nonisolated enum BlobEnvelope {
         _ payload: P, type: BlobRecordType, blobId: UUID, key: SymmetricKey
     ) throws -> EncryptedBlob {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        // .deferredToDate (raw timeIntervalSinceReferenceDate Double) — the only strategy that
+        // round-trips Date EXACTLY. .iso8601 truncates sub-second precision, which broke
+        // restore-equality and destabilized createdAt sort order (M3 amendment to §7.3; interiors
+        // are ciphertext anyway — fidelity beats readability). Amended 2026-07-23, pre-first-blob.
+        encoder.dateEncodingStrategy = .deferredToDate
         encoder.outputFormatting = [.sortedKeys]
         let interior = try encoder.encode(BlobInterior(t: type, v: 1, data: payload))
         guard let combined = try AES.GCM.seal(interior, using: key).combined else {
@@ -82,7 +86,7 @@ nonisolated enum BlobEnvelope {
 
     static func decoder() -> JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .deferredToDate
         return decoder
     }
 }

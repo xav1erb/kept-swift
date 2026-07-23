@@ -188,6 +188,11 @@ screens too late, so:
   question: per-collection sync does NOT justify one).
 - **Envelope (`envelope_version = 1`):** CryptoKit `AES.GCM.seal` under the master key,
   12-byte random nonce, `combined` (nonce ‖ ciphertext ‖ tag) base64 in `payload`.
+  - *Amended 2026-07-23 (M3, pre-first-production-blob):* interior dates encode as
+    `.deferredToDate` (raw `timeIntervalSinceReferenceDate` Double), NOT `.iso8601` — iso8601
+    truncates sub-second precision, which broke restore equality and destabilized `createdAt`
+    ordering once M3's read models exposed chapter dates. Interiors are ciphertext; fidelity
+    beats readability. Envelope version unchanged (no sealed blob existed anywhere yet).
 - **Upload:** after sign-in — initial full backup (every record), then write-behind: each merge
   commit / command enqueues touched record ids; a background uploader drains the queue
   (`upsert` on `(user_id, blob_id)`). Deletes → tombstone (`deleted_at`).

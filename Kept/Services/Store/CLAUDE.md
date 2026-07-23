@@ -32,3 +32,9 @@ unsupervised while those gates are open.
 - **2026-07-23 — PostgREST `bytea` speaks \x-hex.** `encrypted_blobs.payload` is `bytea`; over
   PostgREST it travels as a `"\\x…"` hex string, not base64. `SupabaseBackend.hexEncode/Decode`
   own the framing; tests pin it.
+- **2026-07-23 — `.iso8601` date coding is lossy; `Date` round-trips exactly only via
+  `.deferredToDate`.** iso8601 truncates sub-second precision, so blob-restored records failed
+  `==` against their sources and same-instant `createdAt` sorts became unstable the moment M3
+  exposed chapter dates in read models. Blob interiors now encode `.deferredToDate`
+  (M2-CONTRACTS §7.3 amendment, made before any production blob existed). Wire dates (WireDate,
+  day-precision) are unaffected.
