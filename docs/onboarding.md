@@ -9,8 +9,15 @@
 ## 0. The engine (affirmly pattern, adapted)
 
 - **`OnboardingStep`** — linear `@Observable` state machine (C8):
-  `splash → meetPom → themePicker → iconPicker → aiConsent → interview → worldGenerating →
-  worldContents → privacyPledge → faceID → signIn → reveal`.
+  `splash → meetPom → themePicker → iconPicker → aiConsent → interview → privacyPledge → faceID →
+  signIn → worldGenerating → worldContents → reveal`.
+  <!-- AMENDED 2026-07-23 (M2-CONTRACTS §8.1 ruling: no AI call before sign-in). worldGenerating/
+       worldContents moved after signIn: free-text answers queue locally (PendingUtterance,
+       encrypted) and flush through extraction during worldGenerating — the dwell is real work.
+       Interview acknowledgment bubbles are fixed script lines in v1 (/acknowledge deferred to the
+       first authed surface). Disambiguation questions surface during worldGenerating, pre-reveal.
+       All quoted copy below remains verbatim; §7/§8 screens simply occur post-sign-in. -->
+  
   The **interview** step hosts its own scripted sub-machine (§6 below). The deep-dive is part of the
   interview script (fork-dependent), not a separate step.
 - **`OnboardingScaffold` + progress bar** — progress segments across the top **from screen 3
