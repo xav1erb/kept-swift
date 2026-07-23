@@ -16,6 +16,25 @@ struct UserProfileSnapshot: Equatable, Sendable {
     let streakRestDayUsed: Bool
     let onboardingMode: OnboardingMode?
     let followupQueue: [ChapterType]
+    let hasCompletedOnboarding: Bool
+    let isMinor: Bool
+    let aiConsentGranted: Bool
+}
+
+nonisolated struct OnboardingDraftSnapshot: Equatable, Sendable {
+    let stepRaw: Int
+    let nodeId: String?
+    let bubblesJSON: Data
+    let answersJSON: Data
+}
+
+nonisolated struct PendingUtteranceSnapshot: Equatable, Sendable {
+    let utteranceId: UUID
+    let order: Int
+    let surfaceRaw: String
+    let nodeId: String
+    let text: String
+    let clientTime: Date
 }
 
 struct NotificationPrefsSnapshot: Equatable, Sendable {

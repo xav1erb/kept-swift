@@ -356,6 +356,7 @@ extension KeptStore {
         func touch(_ chapter: Chapter) {
             if !touchedChapters.contains(chapter.id) { touchedChapters.append(chapter.id) }
             chapter.lastTouchedAt = .now
+            noteBlobDirty(.chapter, chapter.id)
         }
 
         func chapter(for handle: EntityHandle) throws -> Chapter {
@@ -396,6 +397,7 @@ extension KeptStore {
             if let notesAppend = d.notesAppend, !notesAppend.isEmpty {
                 person.notes = person.notes.isEmpty ? notesAppend : person.notes + "\n" + notesAppend
             }
+            noteBlobDirty(.person, person.id)
         }
 
         // 2. Chapters
@@ -411,6 +413,13 @@ extension KeptStore {
                 modelContext.insert(chapter)
                 bindings[ref] = chapter.id
                 touch(chapter)
+                // F10 auto-resolve (M2-CONTRACTS §5): a chapter created through ANY capture
+                // silently removes its type from the followupQueue — no completion copy.
+                if let profile = try modelContext.fetch(FetchDescriptor<UserProfile>()).first,
+                   let index = profile.followupQueue.firstIndex(of: d.type) {
+                    profile.followupQueue.remove(at: index)
+                    noteBlobDirty(.userProfile, profile.id)
+                }
             case .id(let id):
                 let chapter = try fetchChapterModel(id)
                 if let title = d.title { chapter.title = title }
@@ -449,6 +458,7 @@ extension KeptStore {
             event.chapter = target
             bindings[d.ref] = event.id
             touch(target)
+            noteBlobDirty(.event, event.id)
         }
 
         // 4. Commitments — "receipts matter": stated date, else utterance date.
@@ -462,6 +472,7 @@ extension KeptStore {
             }
             bindings[d.ref] = commitment.id
             touch(target)
+            noteBlobDirty(.commitment, commitment.id)
         }
         for case .updateCommitmentStatus(let d) in deltas {
             let commitment = try fetchCommitmentModel(resolve(d.commitmentRef))
@@ -473,6 +484,7 @@ extension KeptStore {
                 }
             }
             if let owner = commitment.chapter { touch(owner) }
+            noteBlobDirty(.commitment, commitment.id)
         }
 
         // 5. Goals
@@ -494,6 +506,7 @@ extension KeptStore {
             }
             if let targetDate = d.targetDate { goal.targetDate = targetDate.date }
             if let progressNote = d.progressNote { goal.progressNote = progressNote }
+            noteBlobDirty(.goal, goal.id)
         }
 
         // 6. Cross-links
@@ -511,7 +524,9 @@ extension KeptStore {
             touch(target)
         }
         for case .setPersonMood(let d) in deltas {
-            try fetchPersonModel(resolve(d.personRef)).mood = d.mood
+            let person = try fetchPersonModel(resolve(d.personRef))
+            person.mood = d.mood
+            noteBlobDirty(.person, person.id)
         }
 
         // 8. Folding — one-way, conservative: flips false→true only; refolding never
@@ -522,6 +537,7 @@ extension KeptStore {
                 event.isHealed = true
                 event.healedReason = d.reason
                 if let owner = event.chapter { touch(owner) }
+                noteBlobDirty(.event, event.id)
             }
         }
 

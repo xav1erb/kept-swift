@@ -25,3 +25,10 @@ unsupervised while those gates are open.
   types become actor-isolated and the `@Model` macro expansion rejects them ("main actor-isolated
   conformance … in nonisolated context"). Every enum/struct stored inside a model — and
   `DependencyValues` keys/accessors — must be declared `nonisolated`.
+- **2026-07-23 — fetch order is not stable across restore.** `FetchDescriptor` sorted only by a
+  non-unique key (e.g. `Event.date`) returns ties in insertion order — which CHANGES after a
+  blob restore re-inserts records. Reads that feed equality tests (or any user-visible order)
+  need a deterministic tiebreak (`id.uuidString` post-sort in `events(inChapter:)`).
+- **2026-07-23 — PostgREST `bytea` speaks \x-hex.** `encrypted_blobs.payload` is `bytea`; over
+  PostgREST it travels as a `"\\x…"` hex string, not base64. `SupabaseBackend.hexEncode/Decode`
+  own the framing; tests pin it.

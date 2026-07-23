@@ -12,6 +12,9 @@ packages:
   SnapshotTesting:
     url: https://github.com/pointfreeco/swift-snapshot-testing
     from: 1.18.0
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: 2.0.0
 
 settings:
   base:
@@ -31,9 +34,12 @@ targets:
         excludes:
           - "**/*.md"
           - "**/.gitkeep"
+          - "Services/Backend/AppSecrets.example.swift"
     dependencies:
       - package: Dependencies
         product: Dependencies
+      - package: Supabase
+        product: Supabase
     info:
       path: Kept/Resources/Info.plist
       properties:
@@ -49,6 +55,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.kept.app
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The 8 alternates (4.4: five themed + three disguises; Pom = the primary AppIcon).
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "IconMidnight IconBloom IconGolden IconFern IconTide IconNotes IconWeather IconUtility"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: "0.1.0"

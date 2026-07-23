@@ -16,6 +16,9 @@ final class KeptStore {
 
     enum StoreError: Error {
         case notFound(String)
+        /// C2/M2 §7.1: the utterance queue (and every AI client above it) refuses structurally
+        /// until the consent flag is set. Never a view-layer check.
+        case consentNotGranted
     }
 
     private let container: ModelContainer
@@ -26,6 +29,7 @@ final class KeptStore {
             UserProfile.self, Chapter.self, Person.self, Event.self, Commitment.self,
             Goal.self, Reminder.self, NotificationPrefs.self, Achievement.self, CrossLink.self,
             AppliedUtterance.self, HeldDeltaBatch.self,
+            OnboardingDraft.self, PendingUtterance.self, PendingBlobUpload.self,
         ])
         switch configuration {
         case .live:
@@ -79,7 +83,10 @@ final class KeptStore {
             city: profile.city, occupation: profile.occupation, theme: profile.theme,
             voiceProfile: profile.voiceProfile, streakCount: profile.streakCount,
             streakRestDayUsed: profile.streakRestDayUsed, onboardingMode: profile.onboardingMode,
-            followupQueue: profile.followupQueue
+            followupQueue: profile.followupQueue,
+            hasCompletedOnboarding: profile.hasCompletedOnboarding,
+            isMinor: profile.isMinor,
+            aiConsentGranted: profile.aiConsentGrantedAt != nil
         )
     }
 
@@ -124,7 +131,11 @@ final class KeptStore {
             predicate: #Predicate { $0.chapter?.id == chapterId },
             sortBy: [SortDescriptor(\.date)]
         )
-        return try context.fetch(descriptor).map(Self.snapshot(of:))
+        // Same-day events need a deterministic tiebreak — restore re-inserts in arbitrary order
+        // and reads must be stable across it (M2 restore-equality test).
+        return try context.fetch(descriptor)
+            .sorted { ($0.date, $0.id.uuidString) < ($1.date, $1.id.uuidString) }
+            .map(Self.snapshot(of:))
     }
 
     func commitments(inChapter chapterId: UUID) throws -> [CommitmentSnapshot] {
@@ -205,28 +216,37 @@ final class KeptStore {
     func setUserName(_ name: String) throws {
         let profile = try fetchOrCreateProfile()
         profile.name = name
+        noteBlobDirty(.userProfile, profile.id)
         try context.save()
     }
 
     /// Structured census answers (onboarding chips/fields) write directly — C1 governs
     /// *utterances*; a chip tap is not an utterance (M1-CONTRACTS §8 amendments).
+    /// F6: `isMinor` is derived HERE, at the write (C6 posture) — 13...17 → true. Under-13 must
+    /// never reach this command; the engine hard-stops and wipes first (M2-CONTRACTS §6).
     func setUserBasics(age: Int? = nil, city: String? = nil, occupation: String? = nil) throws {
         let profile = try fetchOrCreateProfile()
-        if let age { profile.age = age }
+        if let age {
+            profile.age = age
+            profile.isMinor = (13...17).contains(age)
+        }
         if let city { profile.city = city }
         if let occupation { profile.occupation = occupation }
+        noteBlobDirty(.userProfile, profile.id)
         try context.save()
     }
 
     func setOnboardingMode(_ mode: OnboardingMode) throws {
         let profile = try fetchOrCreateProfile()
         profile.onboardingMode = mode
+        noteBlobDirty(.userProfile, profile.id)
         try context.save()
     }
 
     func setTheme(_ theme: Theme) throws {
         let profile = try fetchOrCreateProfile()
         profile.theme = theme
+        noteBlobDirty(.userProfile, profile.id)
         try context.save()
     }
 
@@ -239,6 +259,7 @@ final class KeptStore {
     ) throws -> UUID {
         let chapter = Chapter(type: type, chapterKind: chapterKind, title: title, iconRef: iconRef)
         context.insert(chapter)
+        noteBlobDirty(.chapter, chapter.id)
         try context.save()
         return chapter.id
     }
@@ -247,6 +268,7 @@ final class KeptStore {
     func addPerson(name: String, relation: String) throws -> UUID {
         let person = Person(name: name, relation: relation)
         context.insert(person)
+        noteBlobDirty(.person, person.id)
         try context.save()
         return person.id
     }
@@ -257,6 +279,7 @@ final class KeptStore {
         if !chapter.people.contains(where: { $0.id == personId }) {
             chapter.people.append(person)
         }
+        noteBlobDirty(.chapter, chapter.id)
         try context.save()
     }
 
@@ -279,6 +302,8 @@ final class KeptStore {
         context.insert(event)
         event.chapter = chapter
         chapter.lastTouchedAt = .now
+        noteBlobDirty(.event, event.id)
+        noteBlobDirty(.chapter, chapter.id)
         try context.save()
         return event.id
     }
@@ -292,6 +317,7 @@ final class KeptStore {
         if let personId {
             commitment.person = try fetchPerson(personId)
         }
+        noteBlobDirty(.commitment, commitment.id)
         try context.save()
         return commitment.id
     }
@@ -302,12 +328,14 @@ final class KeptStore {
         if !commitment.evidenceEvents.contains(where: { $0.id == eventId }) {
             commitment.evidenceEvents.append(event)
         }
+        noteBlobDirty(.commitment, commitment.id)
         try context.save()
     }
 
     func setCommitmentStatus(_ commitmentId: UUID, status: CommitmentStatus) throws {
         let commitment = try fetchCommitment(commitmentId)
         commitment.status = status
+        noteBlobDirty(.commitment, commitment.id)
         try context.save()
     }
 
@@ -320,6 +348,7 @@ final class KeptStore {
         }
         goal.targetDate = targetDate
         goal.progressNote = progressNote
+        noteBlobDirty(.goal, goal.id)
         try context.save()
         return goal.id
     }
@@ -338,6 +367,183 @@ final class KeptStore {
         let chapter = try fetchChapter(chapterId)
         chapter.state = state
         chapter.lastTouchedAt = .now
+        noteBlobDirty(.chapter, chapter.id)
+        try context.save()
+    }
+
+    // MARK: - Onboarding commands (M2-CONTRACTS §2/§6/§7.1)
+
+    /// The 4.5 legal gate. One-way in v1 (revocation UX is the M7 seal work).
+    func grantAIConsent() throws {
+        let profile = try fetchOrCreateProfile()
+        if profile.aiConsentGrantedAt == nil { profile.aiConsentGrantedAt = .now }
+        noteBlobDirty(.userProfile, profile.id)
+        try context.save()
+    }
+
+    /// Set exactly once at the reveal; deletes the draft in the same save.
+    func completeOnboarding() throws {
+        let profile = try fetchOrCreateProfile()
+        profile.hasCompletedOnboarding = true
+        try deleteAll(OnboardingDraft.self)
+        noteBlobDirty(.userProfile, profile.id)
+        try context.save()
+    }
+
+    /// F6 under-13 hard stop: no data retained. Wipes the draft, the utterance queue, and every
+    /// profile field written so far (the profile row itself remains, blank, consent revoked).
+    func wipeOnboardingData() throws {
+        try deleteAll(OnboardingDraft.self)
+        try deleteAll(PendingUtterance.self)
+        let profile = try fetchOrCreateProfile()
+        profile.name = ""
+        profile.age = nil
+        profile.city = nil
+        profile.occupation = nil
+        profile.onboardingMode = nil
+        profile.isMinor = false
+        profile.aiConsentGrantedAt = nil
+        profile.followupQueue = []
+        try context.save()
+    }
+
+    /// Restore precursor (M2-CONTRACTS §7.3): clears every model record EXCEPT the pending
+    /// utterance queue — the just-given onboarding answers flush into the restored world.
+    func wipeWorldForRestore() throws {
+        try deleteAll(UserProfile.self)
+        try deleteAll(NotificationPrefs.self)
+        try deleteAll(Chapter.self)
+        try deleteAll(Person.self)
+        try deleteAll(Event.self)
+        try deleteAll(Commitment.self)
+        try deleteAll(Goal.self)
+        try deleteAll(Reminder.self)
+        try deleteAll(Achievement.self)
+        try deleteAll(CrossLink.self)
+        try deleteAll(AppliedUtterance.self)
+        try deleteAll(HeldDeltaBatch.self)
+        try deleteAll(OnboardingDraft.self)
+        try deleteAll(PendingBlobUpload.self)
+        try context.save()
+    }
+
+    func saveOnboardingDraft(stepRaw: Int, nodeId: String?, bubblesJSON: Data, answersJSON: Data) throws {
+        let draft: OnboardingDraft
+        if let existing = try context.fetch(FetchDescriptor<OnboardingDraft>()).first {
+            draft = existing
+        } else {
+            draft = OnboardingDraft(stepRaw: stepRaw)
+            context.insert(draft)
+        }
+        draft.stepRaw = stepRaw
+        draft.nodeId = nodeId
+        draft.bubblesJSON = bubblesJSON
+        draft.answersJSON = answersJSON
+        draft.updatedAt = .now
+        try context.save()
+    }
+
+    func onboardingDraft() throws -> OnboardingDraftSnapshot? {
+        guard let draft = try context.fetch(FetchDescriptor<OnboardingDraft>()).first else { return nil }
+        return OnboardingDraftSnapshot(
+            stepRaw: draft.stepRaw, nodeId: draft.nodeId,
+            bubblesJSON: draft.bubblesJSON, answersJSON: draft.answersJSON
+        )
+    }
+
+    // MARK: - The utterance queue (M2 §7.1 — no AI call before sign-in, §8.1 ruling)
+
+    /// Refuses structurally pre-consent (C2). `utteranceId` is minted here — the idempotency key
+    /// for the eventual flush through the M1 pipeline.
+    @discardableResult
+    func enqueueUtterance(surface: Surface, nodeId: String, text: String) throws -> UUID {
+        let profile = try fetchOrCreateProfile()
+        guard profile.aiConsentGrantedAt != nil else { throw StoreError.consentNotGranted }
+        let existing = try context.fetch(FetchDescriptor<PendingUtterance>())
+        let next = (existing.map(\.order).max() ?? -1) + 1
+        let pending = PendingUtterance(order: next, surfaceRaw: surface.rawValue, nodeId: nodeId, text: text)
+        context.insert(pending)
+        try context.save()
+        return pending.utteranceId
+    }
+
+    /// FIFO. The flusher applies each through the M1 pipeline, then removes it — a crash between
+    /// apply and remove replays as a no-op (AppliedUtterance gate).
+    func pendingUtterances() throws -> [PendingUtteranceSnapshot] {
+        try context.fetch(FetchDescriptor<PendingUtterance>(sortBy: [SortDescriptor(\.order)])).map {
+            PendingUtteranceSnapshot(
+                utteranceId: $0.utteranceId, order: $0.order, surfaceRaw: $0.surfaceRaw,
+                nodeId: $0.nodeId, text: $0.text, clientTime: $0.clientTime
+            )
+        }
+    }
+
+    func removePendingUtterance(_ utteranceId: UUID) throws {
+        let descriptor = FetchDescriptor<PendingUtterance>(
+            predicate: #Predicate { $0.utteranceId == utteranceId }
+        )
+        for row in try context.fetch(descriptor) { context.delete(row) }
+        try context.save()
+    }
+
+    // MARK: - followupQueue (F10, M2-CONTRACTS §5)
+
+    /// Fixed priority order; sensitive types are excluded by construction — Pom never solicits
+    /// the private corner or grief (C3, never-test).
+    private static let followupPriority: [ChapterType] = [
+        .relationship, .family, .friendship, .work, .health, .money, .passion, .growth,
+    ]
+
+    /// Enqueue at worldContents confirm: selected-but-unbuilt types, priority-ordered, deduped.
+    func enqueueFollowups(_ types: [ChapterType]) throws {
+        let profile = try fetchOrCreateProfile()
+        let ordered = Self.followupPriority.filter { types.contains($0) }
+        for type in ordered where !profile.followupQueue.contains(type) && !type.isSensitive {
+            profile.followupQueue.append(type)
+        }
+        noteBlobDirty(.userProfile, profile.id)
+        try context.save()
+    }
+
+    /// "Later" chip: to the tail. Session-level once-per-open gating lives in the model layer.
+    func deferFollowup(_ type: ChapterType) throws {
+        let profile = try fetchOrCreateProfile()
+        guard let index = profile.followupQueue.firstIndex(of: type) else { return }
+        profile.followupQueue.remove(at: index)
+        profile.followupQueue.append(type)
+        noteBlobDirty(.userProfile, profile.id)
+        try context.save()
+    }
+
+    // MARK: - Backup write-behind queue (M2-CONTRACTS §7.3)
+
+    /// Upserts a dirty-row WITHOUT saving — the caller's save covers it, so the mark and the
+    /// mutation land atomically (crash consistency).
+    func noteBlobDirty(_ type: BlobRecordType, _ id: UUID, deleted: Bool = false) {
+        let existing = try? context.fetch(FetchDescriptor<PendingBlobUpload>(
+            predicate: #Predicate { $0.blobId == id }
+        )).first
+        if let existing {
+            existing.deleted = deleted
+            existing.enqueuedAt = .now
+        } else {
+            context.insert(PendingBlobUpload(blobId: id, recordTypeRaw: type.rawValue, deleted: deleted))
+        }
+    }
+
+    func pendingBlobUploads() throws -> [(blobId: UUID, type: BlobRecordType, deleted: Bool)] {
+        try context.fetch(FetchDescriptor<PendingBlobUpload>(sortBy: [SortDescriptor(\.enqueuedAt)]))
+            .compactMap { row in
+                guard let type = BlobRecordType(rawValue: row.recordTypeRaw) else { return nil }
+                return (blobId: row.blobId, type: type, deleted: row.deleted)
+            }
+    }
+
+    func clearBlobUpload(_ blobId: UUID) throws {
+        let rows = try context.fetch(FetchDescriptor<PendingBlobUpload>(
+            predicate: #Predicate { $0.blobId == blobId }
+        ))
+        for row in rows { context.delete(row) }
         try context.save()
     }
 
@@ -360,6 +566,10 @@ final class KeptStore {
     }
 
     // MARK: - Private
+
+    private func deleteAll<T: PersistentModel>(_ type: T.Type) throws {
+        for row in try context.fetch(FetchDescriptor<T>()) { context.delete(row) }
+    }
 
     private func fetchOrCreateProfile() throws -> UserProfile {
         if let existing = try context.fetch(FetchDescriptor<UserProfile>()).first {

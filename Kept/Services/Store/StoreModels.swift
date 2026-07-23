@@ -23,6 +23,14 @@ final class UserProfile {
     var streakRestDayUsed: Bool
     var onboardingMode: OnboardingMode?
     var followupQueue: [ChapterType]
+    /// Set exactly once at the reveal (M2). RootView gates on it.
+    var hasCompletedOnboarding: Bool = false
+    /// F6: derived at the age write (13...17 → true), never displayed. Under-13 never reaches
+    /// a stored profile — the engine hard-stops and wipes (M2-CONTRACTS §6).
+    var isMinor: Bool = false
+    /// C2 legal gate (onboarding 4.5): nil = not granted. The utterance queue and every AI
+    /// client refuse structurally while nil (M2-CONTRACTS §7.1).
+    var aiConsentGrantedAt: Date? = nil
     var createdAt: Date
 
     init(id: UUID = UUID(), createdAt: Date = .now) {
@@ -259,6 +267,69 @@ final class AppliedUtterance {
     init(utteranceId: UUID, appliedAt: Date = .now) {
         self.utteranceId = utteranceId
         self.appliedAt = appliedAt
+    }
+}
+
+/// Resumable onboarding draft (M2-CONTRACTS §2): current step + node + the rendered bubble log,
+/// so a killed app re-opens mid-interview pixel-identical. Extracted/command-written data is NOT
+/// duplicated here. Deleted at reveal. Internal — never surfaces in a read model beyond its own
+/// snapshot.
+@Model
+final class OnboardingDraft {
+    var stepRaw: Int
+    var nodeId: String?
+    var bubblesJSON: Data
+    /// nodeId → raw answer; the engine rebuilds its branch/census state from this on resume.
+    var answersJSON: Data
+    var updatedAt: Date
+
+    init(stepRaw: Int, nodeId: String? = nil, bubblesJSON: Data = Data(), answersJSON: Data = Data(), updatedAt: Date = .now) {
+        self.stepRaw = stepRaw
+        self.nodeId = nodeId
+        self.bubblesJSON = bubblesJSON
+        self.answersJSON = answersJSON
+        self.updatedAt = updatedAt
+    }
+}
+
+/// The pre-sign-in utterance queue (M2-CONTRACTS §7.1, §8.1 ruling): free-text answers park here —
+/// encrypted at rest like everything in the store — and flush FIFO through the M1 pipeline at
+/// first sign-in. `utteranceId` is minted at capture so a crash mid-flush replays safely through
+/// the `AppliedUtterance` idempotency gate.
+@Model
+final class PendingUtterance {
+    @Attribute(.unique) var utteranceId: UUID
+    var order: Int
+    var surfaceRaw: String
+    var nodeId: String
+    var text: String
+    var clientTime: Date
+
+    init(utteranceId: UUID = UUID(), order: Int, surfaceRaw: String, nodeId: String, text: String, clientTime: Date = .now) {
+        self.utteranceId = utteranceId
+        self.order = order
+        self.surfaceRaw = surfaceRaw
+        self.nodeId = nodeId
+        self.text = text
+        self.clientTime = clientTime
+    }
+}
+
+/// Write-behind backup queue (M2-CONTRACTS §7.3): commands and the merge engine enqueue touched
+/// record refs in the same save; the uploader drains when authed. `deleted` rows become server
+/// tombstones. Internal plumbing — never in a read model.
+@Model
+final class PendingBlobUpload {
+    @Attribute(.unique) var blobId: UUID
+    var recordTypeRaw: String
+    var deleted: Bool
+    var enqueuedAt: Date
+
+    init(blobId: UUID, recordTypeRaw: String, deleted: Bool = false, enqueuedAt: Date = .now) {
+        self.blobId = blobId
+        self.recordTypeRaw = recordTypeRaw
+        self.deleted = deleted
+        self.enqueuedAt = enqueuedAt
     }
 }
 
