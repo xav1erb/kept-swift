@@ -1,16 +1,27 @@
 import SwiftUI
 
-/// The root gate. M0: app-lock state → lock screen or the shell. M2 adds the onboarding gate
-/// (`!hasCompletedOnboarding`) in front of this.
+/// The root gate (M2-CONTRACTS §2): `!hasCompletedOnboarding` → onboarding; else the M0
+/// app-lock gate → lock screen or the shell.
 struct RootView: View {
     @Environment(AppLockModel.self) private var appLock
+    @Environment(KeptStore.self) private var store
+    @Environment(OnboardingModel.self) private var onboarding
+
+    private var needsOnboarding: Bool {
+        // `isFinished` is the observable completion signal; the stored flag covers relaunches.
+        !onboarding.isFinished && !(((try? store.userProfile())?.hasCompletedOnboarding) ?? false)
+    }
 
     var body: some View {
-        switch appLock.state {
-        case .locked:
-            LockScreenView()
-        case .disabled, .unlocked:
-            AppShellView()
+        if needsOnboarding {
+            OnboardingFlowView()
+        } else {
+            switch appLock.state {
+            case .locked:
+                LockScreenView()
+            case .disabled, .unlocked:
+                AppShellView()
+            }
         }
     }
 }

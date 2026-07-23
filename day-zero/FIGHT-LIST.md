@@ -40,6 +40,18 @@
   (`day-zero/M1-CONTRACTS.md` §8): model ids pinned (haiku-4-5 extract / sonnet-5 M4) · blob upload
   → M2 sign-in slice · **folded events INCLUDED flagged in extraction context (overrides draft)** ·
   server-led schemaVersion · `acknowledge` endpoint → M2-CONTRACTS.
+- **M1 headless build green** 2026-07-19 (45 tests; corpus fx-001…fx-011). Milestone close still
+  gated on 👤 PROVISIONING item 2 (key + written no-training confirmation) → live smoke + first
+  prompt-suite run.
+- **M2-CONTRACTS approved** 2026-07-23 with four rulings (`day-zero/M2-CONTRACTS.md` §8):
+  **pre-sign-in AI calls QUEUE UNTIL SIGN-IN (overrides draft; step reorder + /acknowledge
+  deferred + fixed interview acknowledgments)** · acknowledge model = haiku-4-5 when it lands ·
+  F6 as drafted (u13 hard stop, skip=adult, GDPR-K 👤 legal pre-EU) · backup + restore both in M2.
+  F6 + F10 specs thereby closed as drafted.
+- **M2 headless build green** 2026-07-23 (72 tests / 13 suites: engine walks both forks, queue +
+  flush idempotency, F10/F6 behaviors + never-scans, envelope/restore crypto, end-to-end flow
+  incl. the returning-account restore path). Milestone close gated on the §9.7 device checklist
+  (👤 provisioning items 1.3 + 3, anon key).
 
 ## Open
 

@@ -32,7 +32,7 @@ prompt-suite harness with the first never-list red-team cases.
 vents + two-Saras cases) produces the expected object graph, asserted by tests — **before any UI
 polish exists.** This milestone is the app.
 
-### M2 — Onboarding `☐` (F6 restricted-u18 spec + F10 followupQueue spec drafted in M2-CONTRACTS 👤 approval)
+### M2 — Onboarding `◐` (contracts APPROVED + headless build GREEN 2026-07-23, 72 tests; 👤 remaining: device-verify checklist M2-CONTRACTS §9.7 — needs PROVISIONING items 1.3 + 3 + the anon key in AppSecrets.swift)
 **Canonical spec: `docs/onboarding.md`** — screen-by-screen with verbatim copy, the scripted
 interview (fixed questions + AI acknowledgments), fork mechanics, extraction mappings, and the
 11-point acceptance list. Engine = the affirmly onboarding pattern (linear @Observable step machine,

@@ -3,14 +3,38 @@ import SwiftUI
 @main
 struct KeptApp: App {
     @State private var store: KeptStore
-    @State private var themeModel = ThemeModel()
+    @State private var themeModel: ThemeModel
     @State private var router = Router()
     @State private var appLock = AppLockModel()
+    @State private var onboarding: OnboardingModel
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
         do {
-            _store = State(initialValue: try KeptStore())
+            let store = try KeptStore()
+            _store = State(initialValue: store)
+            // Composition root wiring (M2): backend from AppSecrets (Unconfigured when the anon
+            // key is absent — the app runs fully local); extraction endpoint = the Supabase
+            // functions host with the user JWT (C5).
+            let backend = BackendClientKey.liveValue
+            let extraction: any ExtractionServicing
+            if let config = BackendConfig.load() {
+                extraction = LiveExtractionClient(endpoint: ExtractionEndpoint(
+                    baseURL: config.url,
+                    accessToken: { @Sendable in try await backend.accessToken() }
+                ))
+            } else {
+                extraction = UnconfiguredExtractionClient()
+            }
+            _onboarding = State(initialValue: OnboardingModel(
+                store: store,
+                backend: backend,
+                extraction: extraction,
+                masterKey: KeychainMasterKey()
+            ))
+            _themeModel = State(initialValue: ThemeModel(
+                theme: ((try? store.userProfile())?.theme) ?? .cloudCream
+            ))
         } catch {
             // Composition root: there is no app without the store. Fail loudly (NN#7 spirit),
             // never limp along with an un-kept world.
@@ -25,8 +49,13 @@ struct KeptApp: App {
                 .environment(themeModel)
                 .environment(router)
                 .environment(appLock)
+                .environment(onboarding)
                 .onOpenURL { url in
-                    _ = router.open(deepLink: url)
+                    if url.host() == "auth-callback" {
+                        Task { await onboarding.handleAuthCallback(url: url) }
+                    } else {
+                        _ = router.open(deepLink: url)
+                    }
                 }
                 .onChange(of: scenePhase) { _, phase in
                     appLock.handleScenePhase(phase)
