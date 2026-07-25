@@ -28,7 +28,7 @@ final class KeptStore {
         let schema = Schema([
             UserProfile.self, Chapter.self, Person.self, Event.self, Commitment.self,
             Goal.self, Reminder.self, NotificationPrefs.self, Achievement.self, CrossLink.self,
-            AppliedUtterance.self, HeldDeltaBatch.self,
+            AppliedUtterance.self, HeldDeltaBatch.self, ChatMessage.self,
             OnboardingDraft.self, PendingUtterance.self, PendingBlobUpload.self,
         ])
         switch configuration {
@@ -125,6 +125,15 @@ final class KeptStore {
             .map(Self.snapshot(of:))
     }
 
+    /// Every event, newest first — the River's read (M5-CONTRACTS §2). Deterministic
+    /// (date desc, id) order via the swapped-tuple tiebreak (restore-stability rule).
+    func riverEvents() throws -> [EventSnapshot] {
+        let descriptor = FetchDescriptor<Event>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        return try context.fetch(descriptor)
+            .sorted { ($1.date, $0.id.uuidString) < ($0.date, $1.id.uuidString) }
+            .map(Self.snapshot(of:))
+    }
+
     func people() throws -> [PersonSnapshot] {
         let descriptor = FetchDescriptor<Person>(sortBy: [SortDescriptor(\.name)])
         return try context.fetch(descriptor).map { person in
@@ -190,11 +199,17 @@ final class KeptStore {
     /// Minimum-necessary context for the proxy (M1-CONTRACTS §4). Folded events travel WITH
     /// `isHealed: true` (§8.3 ruling). `recentEventLimit` bounds the event window — an event id
     /// outside this window is unknown to the model, and the merge validates ids against exactly
-    /// what was sent.
-    func extractionContext(recentEventLimit: Int = 20) throws -> ExtractionContext {
+    /// what was sent. `openChapterId` (M4-CONTRACTS §2) lists that chapter FIRST — the
+    /// chapterChat surface prompt defaults deltas to "the open chapter (listed first in context)".
+    func extractionContext(recentEventLimit: Int = 20, openChapterId: UUID? = nil) throws -> ExtractionContext {
         let people = try context.fetch(FetchDescriptor<Person>(sortBy: [SortDescriptor(\.name)]))
             .map { ExtractionContext.PersonContext(id: $0.id, name: $0.name, relation: $0.relation) }
-        let chapters = try fetchAllChapters().map {
+        var chapterModels = try fetchAllChapters()
+        if let openChapterId, let index = chapterModels.firstIndex(where: { $0.id == openChapterId }) {
+            let open = chapterModels.remove(at: index)
+            chapterModels.insert(open, at: 0)
+        }
+        let chapters = chapterModels.map {
             ExtractionContext.ChapterContext(
                 id: $0.id, type: $0.type, title: $0.title, state: $0.state, filledSlots: $0.filledSlots
             )
@@ -385,6 +400,113 @@ final class KeptStore {
         try context.save()
     }
 
+    // MARK: - Chapter chat + prep (M4-CONTRACTS §2)
+
+    /// One turn into the persistent chapter memory. `card` is encoded HERE with the wire encoder
+    /// so store and wire stay 1:1; the snapshot decodes it back on read.
+    @discardableResult
+    func appendChatMessage(chapterId: UUID, author: ChatAuthor, text: String, card: PrepCard? = nil) throws -> UUID {
+        let chapter = try fetchChapter(chapterId)
+        let cardJSON = try card.map { try JSONEncoder().encode($0) }
+        let message = ChatMessage(authorRaw: author.rawValue, text: text, cardJSON: cardJSON)
+        context.insert(message)
+        message.chapter = chapter
+        chapter.lastTouchedAt = .now
+        noteBlobDirty(.chatMessage, message.id)
+        noteBlobDirty(.chapter, chapter.id)
+        try context.save()
+        return message.id
+    }
+
+    /// The chapter's conversation, oldest first. Deterministic `(date, id)` order (restore-stable).
+    func chatMessages(inChapter chapterId: UUID) throws -> [ChatMessageSnapshot] {
+        let descriptor = FetchDescriptor<ChatMessage>(
+            predicate: #Predicate { $0.chapter?.id == chapterId },
+            sortBy: [SortDescriptor(\.date)]
+        )
+        return try context.fetch(descriptor)
+            .sorted { ($0.date, $0.id.uuidString) < ($1.date, $1.id.uuidString) }
+            .map { message in
+                // Strict card decode (NN#7): we encoded it, so failure means corruption — loud.
+                ChatMessageSnapshot(
+                    id: message.id, chapterId: message.chapter?.id,
+                    author: ChatAuthor(rawValue: message.authorRaw) ?? .pom,
+                    text: message.text,
+                    card: try message.cardJSON.map { try JSONDecoder().decode(PrepCard.self, from: $0) },
+                    date: message.date
+                )
+            }
+    }
+
+    /// Prep completion stamp (openingClose card landed). A timestamp, never a timer (C3).
+    func markPrepared(eventId: UUID) throws {
+        let event = try fetchEvent(eventId)
+        if event.preparedAt == nil { event.preparedAt = .now }
+        noteBlobDirty(.event, event.id)
+        try context.save()
+    }
+
+    /// Stores the M6 check-in intent. M4 arms; M6 delivers.
+    func armPostEventCheckIn(eventId: UUID) throws {
+        let event = try fetchEvent(eventId)
+        event.checkInArmed = true
+        noteBlobDirty(.event, event.id)
+        try context.save()
+    }
+
+    /// The chapter-scoped context for `/chat` (M4-CONTRACTS §3): fuller than extraction context —
+    /// chat needs the whole room — but still one chapter only (minimum-necessary, C2). Folded
+    /// events travel WITH `isHealed` + `healedReason`; the server assembler quarantines them into
+    /// the sealed-memories block (M4-CONTRACTS §4).
+    func chatContext(chapterId: UUID) throws -> ChatContext {
+        let chapter = try fetchChapter(chapterId)
+        let userName = (try? userProfile())?.name ?? ""
+        let people = chapter.people
+            .sorted { ($0.name, $0.id.uuidString) < ($1.name, $1.id.uuidString) }
+            .map {
+                ChatContext.PersonContext(
+                    id: $0.id, name: $0.name, relation: $0.relation, mood: $0.mood,
+                    roleFlags: $0.roleFlags, rituals: $0.rituals, notes: $0.notes, priority: $0.priority
+                )
+            }
+        let events = try events(inChapter: chapterId).map {
+            ChatContext.EventContext(
+                id: $0.id, title: $0.title, body: $0.body, date: WireDate(date: $0.date),
+                valence: $0.valence, isOpen: $0.isOpen, isHealed: $0.isHealed,
+                healedReason: $0.healedReason, isUpcoming: $0.isUpcoming
+            )
+        }
+        let commitments = try commitments(inChapter: chapterId).map {
+            ChatContext.CommitmentContext(
+                id: $0.id, personId: $0.personId, text: $0.text,
+                dateMade: WireDate(date: $0.dateMade), status: $0.status
+            )
+        }
+        let goals = try goals().filter { $0.chapterId == chapterId }.map {
+            ChatContext.GoalContext(
+                id: $0.id, text: $0.text,
+                targetDate: $0.targetDate.map { WireDate(date: $0) }, progressNote: $0.progressNote
+            )
+        }
+        let chapterTitles = try chapterSummaries().reduce(into: [UUID: String]()) { $0[$1.id] = $1.title }
+        let crossLinks = try crossLinks()
+            .filter { $0.fromChapterId == chapterId || $0.toChapterId == chapterId }
+            .compactMap { link -> ChatContext.CrossLinkContext? in
+                let otherId = link.fromChapterId == chapterId ? link.toChapterId : link.fromChapterId
+                guard let otherId, let title = chapterTitles[otherId] else { return nil }
+                return ChatContext.CrossLinkContext(otherChapterTitle: title, note: link.note)
+            }
+        return ChatContext(
+            userName: userName,
+            chapter: ChatContext.ChapterContext(
+                id: chapter.id, type: chapter.type, title: chapter.title, state: chapter.state,
+                awarenessPct: chapter.awarenessPct, filledSlots: chapter.filledSlots
+            ),
+            people: people, events: events, commitments: commitments,
+            goals: goals, crossLinks: crossLinks
+        )
+    }
+
     // MARK: - Onboarding commands (M2-CONTRACTS §2/§6/§7.1)
 
     /// The 4.5 legal gate. One-way in v1 (revocation UX is the M7 seal work).
@@ -436,6 +558,7 @@ final class KeptStore {
         try deleteAll(CrossLink.self)
         try deleteAll(AppliedUtterance.self)
         try deleteAll(HeldDeltaBatch.self)
+        try deleteAll(ChatMessage.self)
         try deleteAll(OnboardingDraft.self)
         try deleteAll(PendingBlobUpload.self)
         try context.save()
@@ -470,12 +593,14 @@ final class KeptStore {
     /// Refuses structurally pre-consent (C2). `utteranceId` is minted here — the idempotency key
     /// for the eventual flush through the M1 pipeline.
     @discardableResult
-    func enqueueUtterance(surface: Surface, nodeId: String, text: String) throws -> UUID {
+    func enqueueUtterance(surface: Surface, nodeId: String, text: String, chapterId: UUID? = nil) throws -> UUID {
         let profile = try fetchOrCreateProfile()
         guard profile.aiConsentGrantedAt != nil else { throw StoreError.consentNotGranted }
         let existing = try context.fetch(FetchDescriptor<PendingUtterance>())
         let next = (existing.map(\.order).max() ?? -1) + 1
-        let pending = PendingUtterance(order: next, surfaceRaw: surface.rawValue, nodeId: nodeId, text: text)
+        let pending = PendingUtterance(
+            order: next, surfaceRaw: surface.rawValue, nodeId: nodeId, text: text, chapterId: chapterId
+        )
         context.insert(pending)
         try context.save()
         return pending.utteranceId
@@ -487,7 +612,7 @@ final class KeptStore {
         try context.fetch(FetchDescriptor<PendingUtterance>(sortBy: [SortDescriptor(\.order)])).map {
             PendingUtteranceSnapshot(
                 utteranceId: $0.utteranceId, order: $0.order, surfaceRaw: $0.surfaceRaw,
-                nodeId: $0.nodeId, text: $0.text, clientTime: $0.clientTime
+                nodeId: $0.nodeId, text: $0.text, clientTime: $0.clientTime, chapterId: $0.chapterId
             )
         }
     }
@@ -571,6 +696,14 @@ final class KeptStore {
     func fetchEventModel(_ id: UUID) throws -> Event { try fetchEvent(id) }
     func fetchCommitmentModel(_ id: UUID) throws -> Commitment { try fetchCommitment(id) }
 
+    func fetchChatMessageModel(_ id: UUID) throws -> ChatMessage {
+        let descriptor = FetchDescriptor<ChatMessage>(predicate: #Predicate { $0.id == id })
+        guard let message = try context.fetch(descriptor).first else {
+            throw StoreError.notFound("ChatMessage \(id)")
+        }
+        return message
+    }
+
     func fetchGoalModel(_ id: UUID) throws -> Goal {
         let descriptor = FetchDescriptor<Goal>(predicate: #Predicate { $0.id == id })
         guard let goal = try context.fetch(descriptor).first else {
@@ -649,7 +782,8 @@ final class KeptStore {
             id: event.id, chapterId: event.chapter?.id, date: event.date, title: event.title,
             body: event.body, valence: event.valence, isOpen: event.isOpen,
             isHealed: event.isHealed, healedReason: event.healedReason,
-            isUpcoming: event.isUpcoming, source: event.source
+            isUpcoming: event.isUpcoming, source: event.source,
+            preparedAt: event.preparedAt, checkInArmed: event.checkInArmed
         )
     }
 }

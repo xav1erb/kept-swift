@@ -44,7 +44,7 @@ final class UtteranceFlusher {
                 continue
             }
             do {
-                let context = try store.extractionContext()
+                let context = try store.extractionContext(openChapterId: utterance.chapterId)
                 let request = ExtractionRequest(
                     utteranceId: utterance.utteranceId,
                     surface: surface,

@@ -152,7 +152,12 @@ final class InterviewEngine {
                     stateChip: chip
                 )
             case .utterance:
-                try store.enqueueUtterance(surface: script.utteranceSurface, nodeId: node.id, text: answer)
+                // Chapter sequences stamp their chapter so the flusher lists it FIRST in
+                // extraction context (M4-CONTRACTS §2 — "the open chapter, listed first").
+                let chapterId: UUID? = if case .chapter(let id) = script.slotSource { id } else { nil }
+                try store.enqueueUtterance(
+                    surface: script.utteranceSurface, nodeId: node.id, text: answer, chapterId: chapterId
+                )
             case .notificationChoice:
                 if answer == "yes" {
                     _ = await notifications.requestAuthorization()

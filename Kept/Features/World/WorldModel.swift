@@ -223,8 +223,9 @@ final class WorldModel {
             chapterTitle: chapter.title,
             eventTitle: event.title,
             relativeDay: relativeDay(from: now, to: event.date, calendar: calendar),
-            prepArmed: false,
-            checkInArmed: false
+            // M4: prep now really arms (Event.preparedAt); check-in intent stores at M4, fires M6.
+            prepArmed: event.preparedAt != nil,
+            checkInArmed: event.checkInArmed
         )
     }
 

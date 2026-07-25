@@ -67,6 +67,8 @@ final class Chapter {
     var commitments: [Commitment]
     @Relationship(inverse: \Person.chapters)
     var people: [Person]
+    @Relationship(deleteRule: .cascade, inverse: \ChatMessage.chapter)
+    var chatMessages: [ChatMessage]
 
     init(
         id: UUID = UUID(),
@@ -90,6 +92,30 @@ final class Chapter {
         self.events = []
         self.commitments = []
         self.people = []
+        self.chatMessages = []
+    }
+}
+
+/// One turn of a chapter chat — the persistent memory (whitepaper §10, M4-CONTRACTS §2).
+/// Prep cards persist as chat history: `cardJSON` holds the typed `PrepCard` payload (the wire
+/// type, 1:1) encoded as JSON Data — the proven pattern for typed payloads in this store
+/// (OnboardingDraft.bubblesJSON, HeldDeltaBatch.deltasJSON). Joins the E2E backup via the
+/// additive `"chatMessage"` interior tag (§10.3 ruling).
+@Model
+final class ChatMessage {
+    @Attribute(.unique) var id: UUID
+    var chapter: Chapter?
+    var authorRaw: String
+    var text: String
+    var cardJSON: Data?
+    var date: Date
+
+    init(id: UUID = UUID(), authorRaw: String, text: String, cardJSON: Data? = nil, date: Date = .now) {
+        self.id = id
+        self.authorRaw = authorRaw
+        self.text = text
+        self.cardJSON = cardJSON
+        self.date = date
     }
 }
 
@@ -134,6 +160,11 @@ final class Event {
     var healedReason: String? = nil
     var isUpcoming: Bool
     var source: EventSource
+    /// M4-CONTRACTS §2: prep completion stamp — nil until the openingClose card lands. A timestamp
+    /// and a bool by construction: no timer, no countdown exists here (C3/§19).
+    var preparedAt: Date? = nil
+    /// Armed intent for the M6 post-event check-in. M4 stores it; M6 delivers.
+    var checkInArmed: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -304,14 +335,19 @@ final class PendingUtterance {
     var nodeId: String
     var text: String
     var clientTime: Date
+    /// M4-CONTRACTS §2: the chapter this utterance was spoken IN (chapter chat / sequences).
+    /// The flusher lists it first in extraction context — the chapterChat surface prompt reads
+    /// "default every delta to the open chapter (listed first)". nil = no owning chapter.
+    var chapterId: UUID? = nil
 
-    init(utteranceId: UUID = UUID(), order: Int, surfaceRaw: String, nodeId: String, text: String, clientTime: Date = .now) {
+    init(utteranceId: UUID = UUID(), order: Int, surfaceRaw: String, nodeId: String, text: String, clientTime: Date = .now, chapterId: UUID? = nil) {
         self.utteranceId = utteranceId
         self.order = order
         self.surfaceRaw = surfaceRaw
         self.nodeId = nodeId
         self.text = text
         self.clientTime = clientTime
+        self.chapterId = chapterId
     }
 }
 

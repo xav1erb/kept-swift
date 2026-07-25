@@ -166,7 +166,7 @@ struct WorldModelTests {
         EventSnapshot(
             id: UUID(), chapterId: chapterId, date: date, title: title, body: "",
             valence: .storm, isOpen: true, isHealed: false, healedReason: nil,
-            isUpcoming: true, source: .onboarding
+            isUpcoming: true, source: .onboarding, preparedAt: nil, checkInArmed: false
         )
     }
 

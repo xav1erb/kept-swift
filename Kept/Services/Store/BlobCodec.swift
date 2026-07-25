@@ -52,6 +52,9 @@ extension KeptStore {
         for held in try modelContext.fetch(FetchDescriptor<HeldDeltaBatch>()) {
             blobs.append(try BlobEnvelope.seal(Self.blob(of: held), type: .heldDeltaBatch, blobId: held.id, key: key))
         }
+        for message in try modelContext.fetch(FetchDescriptor<ChatMessage>()) {
+            blobs.append(try BlobEnvelope.seal(Self.blob(of: message), type: .chatMessage, blobId: message.id, key: key))
+        }
         return blobs
     }
 
@@ -78,6 +81,9 @@ extension KeptStore {
             return try BlobEnvelope.seal(Self.blob(of: model), type: type, blobId: id, key: key)
         case .goal:
             guard let model = try? fetchGoalModel(id) else { return nil }
+            return try BlobEnvelope.seal(Self.blob(of: model), type: type, blobId: id, key: key)
+        case .chatMessage:
+            guard let model = try? fetchChatMessageModel(id) else { return nil }
             return try BlobEnvelope.seal(Self.blob(of: model), type: type, blobId: id, key: key)
         case .reminder, .achievement, .crossLink, .appliedUtterance, .heldDeltaBatch:
             // Not written by any M2 surface; the full-backup path covers them.
@@ -170,6 +176,8 @@ extension KeptStore {
                 )
                 event.isHealed = blob.isHealed
                 event.healedReason = blob.healedReason
+                event.preparedAt = blob.preparedAt
+                event.checkInArmed = blob.checkInArmed
                 modelContext.insert(event)
                 events[blob.id] = event
                 if let chapterId = blob.chapterId { eventChapter[blob.id] = chapterId }
@@ -216,6 +224,14 @@ extension KeptStore {
                     bindingsJSON: blob.bindingsJSON, surfaceRaw: blob.surfaceRaw,
                     clientTime: blob.clientTime, createdAt: blob.createdAt
                 ))
+            case .chatMessage:
+                let blob = try decoder.decode(BlobInterior<ChatMessageBlob>.self, from: interior).data
+                let message = ChatMessage(
+                    id: blob.id, authorRaw: blob.authorRaw, text: blob.text,
+                    cardJSON: blob.cardJSON, date: blob.date
+                )
+                modelContext.insert(message)
+                if let chapterId = blob.chapterId { message.chapter = chapters[chapterId] }
             }
         }
 
@@ -286,7 +302,15 @@ extension KeptStore {
             id: event.id, chapterId: event.chapter?.id, date: event.date, title: event.title,
             body: event.body, valence: event.valence, isOpen: event.isOpen,
             isHealed: event.isHealed, healedReason: event.healedReason,
-            isUpcoming: event.isUpcoming, source: event.source
+            isUpcoming: event.isUpcoming, source: event.source,
+            preparedAt: event.preparedAt, checkInArmed: event.checkInArmed
+        )
+    }
+
+    private static func blob(of message: ChatMessage) -> ChatMessageBlob {
+        ChatMessageBlob(
+            id: message.id, chapterId: message.chapter?.id, authorRaw: message.authorRaw,
+            text: message.text, cardJSON: message.cardJSON, date: message.date
         )
     }
 

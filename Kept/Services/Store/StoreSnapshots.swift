@@ -35,6 +35,7 @@ nonisolated struct PendingUtteranceSnapshot: Equatable, Sendable {
     let nodeId: String
     let text: String
     let clientTime: Date
+    let chapterId: UUID?
 }
 
 struct NotificationPrefsSnapshot: Equatable, Sendable {
@@ -75,7 +76,9 @@ struct PersonSnapshot: Equatable, Sendable, Identifiable {
     let chapterIds: [UUID]
 }
 
-struct EventSnapshot: Equatable, Sendable, Identifiable {
+// nonisolated: consumed by the nonisolated TimelineNode grammar (M4) — the default-MainActor
+// synthesized conformances would otherwise be unusable there (Store CLAUDE.md 2026-07-19 gotcha).
+nonisolated struct EventSnapshot: Equatable, Sendable, Identifiable {
     let id: UUID
     let chapterId: UUID?
     let date: Date
@@ -87,6 +90,21 @@ struct EventSnapshot: Equatable, Sendable, Identifiable {
     let healedReason: String?
     let isUpcoming: Bool
     let source: EventSource
+    /// M4: prep completion stamp + M6 check-in intent. A timestamp and a bool by construction —
+    /// no timer, no countdown (C3/§19).
+    let preparedAt: Date?
+    let checkInArmed: Bool
+}
+
+/// One chapter-chat turn (M4). `card` is the typed prep component when this message carries one —
+/// decoded from the stored payload with the REAL wire decoder (a corrupt card fails loudly, NN#7).
+nonisolated struct ChatMessageSnapshot: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let chapterId: UUID?
+    let author: ChatAuthor
+    let text: String
+    let card: PrepCard?
+    let date: Date
 }
 
 struct CommitmentSnapshot: Equatable, Sendable, Identifiable {

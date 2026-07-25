@@ -11,6 +11,9 @@ import Foundation
 nonisolated enum BlobRecordType: String, Codable, CaseIterable, Sendable {
     case userProfile, notificationPrefs, chapter, person, event, commitment
     case goal, reminder, achievement, crossLink, appliedUtterance, heldDeltaBatch
+    /// M4 §10.3 ruling: chat history joins the backup. Additive — the tag lives inside the
+    /// ciphertext, the server stays type-blind, envelope_version unchanged.
+    case chatMessage
 
     /// `NotificationPrefs` has no id of its own — the singleton rides a fixed blob id.
     static let notificationPrefsSingletonId = UUID(uuidString: "00000000-0000-4000-8000-000000000001")!
@@ -163,6 +166,58 @@ nonisolated struct EventBlob: Codable {
     let healedReason: String?
     let isUpcoming: Bool
     let source: EventSource
+    // M4 additions — decoded tolerantly so any pre-M4 sealed interior (test-era only; no
+    // production blob predates this) still opens.
+    let preparedAt: Date?
+    let checkInArmed: Bool
+
+    init(
+        id: UUID, chapterId: UUID?, date: Date, title: String, body: String, valence: Valence,
+        isOpen: Bool, isHealed: Bool, healedReason: String?, isUpcoming: Bool, source: EventSource,
+        preparedAt: Date?, checkInArmed: Bool
+    ) {
+        self.id = id
+        self.chapterId = chapterId
+        self.date = date
+        self.title = title
+        self.body = body
+        self.valence = valence
+        self.isOpen = isOpen
+        self.isHealed = isHealed
+        self.healedReason = healedReason
+        self.isUpcoming = isUpcoming
+        self.source = source
+        self.preparedAt = preparedAt
+        self.checkInArmed = checkInArmed
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        chapterId = try c.decodeIfPresent(UUID.self, forKey: .chapterId)
+        date = try c.decode(Date.self, forKey: .date)
+        title = try c.decode(String.self, forKey: .title)
+        body = try c.decode(String.self, forKey: .body)
+        valence = try c.decode(Valence.self, forKey: .valence)
+        isOpen = try c.decode(Bool.self, forKey: .isOpen)
+        isHealed = try c.decode(Bool.self, forKey: .isHealed)
+        healedReason = try c.decodeIfPresent(String.self, forKey: .healedReason)
+        isUpcoming = try c.decode(Bool.self, forKey: .isUpcoming)
+        source = try c.decode(EventSource.self, forKey: .source)
+        preparedAt = try c.decodeIfPresent(Date.self, forKey: .preparedAt)
+        checkInArmed = try c.decodeIfPresent(Bool.self, forKey: .checkInArmed) ?? false
+    }
+}
+
+/// M4: one chat turn. `cardJSON` carries the typed PrepCard payload opaquely — the snapshot layer
+/// decodes it with the wire decoder; the blob layer never re-interprets it.
+nonisolated struct ChatMessageBlob: Codable {
+    let id: UUID
+    let chapterId: UUID?
+    let authorRaw: String
+    let text: String
+    let cardJSON: Data?
+    let date: Date
 }
 
 nonisolated struct CommitmentBlob: Codable {

@@ -19,6 +19,10 @@
    training**. This is a contractual gate for M1 — the consent screen's claim depends on it.
 3. Hand to the agent: the key as a Supabase Edge Function secret (`supabase secrets set
    ANTHROPIC_API_KEY=...`). It never appears in the app binary or repo (C5).
+4. When the key lands, both proxies deploy from the repo: `scripts/deploy-extract.sh` (M1) and
+   `scripts/deploy-chat.sh` (M4; model ids are already env-defaulted — `claude-haiku-4-5` /
+   `claude-sonnet-5` per M1 §8.1). Then the first prompt-suite run:
+   `deno run --allow-net --allow-env --allow-read prompt-suite/run.ts`.
 
 ## 3. Apple Developer setup
 1. Register a bundle id (placeholder fine per F5, e.g. `com.keeper.app` — renameable pre-launch but
