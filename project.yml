@@ -47,6 +47,9 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIAppFonts: [Fraunces.ttf, Quicksand.ttf]
         NSFaceIDUsageDescription: "Only your face opens your world."
+        # M5 voice capture (⚠ copy review). On-device only — F9: voice never leaves your phone.
+        NSMicrophoneUsageDescription: "Your voice turns into text right here on your phone — it never leaves it."
+        NSSpeechRecognitionUsageDescription: "Speech becomes text on this device only. Nothing is sent anywhere."
         CFBundleURLTypes:
           - CFBundleURLName: com.kept.app
             CFBundleURLSchemes: [kept]

@@ -20,7 +20,7 @@ struct AppShellView: View {
             }
         }
         .sheet(isPresented: $router.isTellPomPresented) {
-            TellPomPlaceholderSheet()
+            TellPomSheet()
         }
         .tint(tokens.ink)
     }
@@ -31,10 +31,7 @@ struct AppShellView: View {
         case .world:
             WorldView()
         case .river:
-            SurfacePlaceholder(
-                title: "the River",
-                state: .empty(message: "The river starts flowing at M5 — every chapter will weave into one stream.")
-            )
+            RiverView()
         case .wins:
             SurfacePlaceholder(
                 title: "your wins ⭐",
@@ -49,10 +46,7 @@ struct AppShellView: View {
     private func destination(for route: Route) -> some View {
         switch route {
         case .chapter(let id):
-            SurfacePlaceholder(
-                title: "chapter",
-                state: .empty(message: "Chapter detail lands at M4.\n(\(id.uuidString.prefix(8))…)")
-            )
+            ChapterDetailView(chapterId: id)
         case .streak:
             SurfacePlaceholder(
                 title: "tending your world",
@@ -126,30 +120,3 @@ struct KeptTabBar: View {
     }
 }
 
-/// Fresh-each-session capture sheet placeholder (the real Tell Pom lands at M5).
-struct TellPomPlaceholderSheet: View {
-    @Environment(ThemeModel.self) private var themeModel
-
-    var body: some View {
-        let tokens = themeModel.tokens
-        VStack(spacing: 12) {
-            Capsule()
-                .fill(tokens.inkSoft.opacity(0.4))
-                .frame(width: 36, height: 5)
-                .padding(.top, 10)
-            Text("I'm listening.")
-                .font(KeptFont.display(24))
-                .foregroundStyle(tokens.ink)
-            Text("Say anything — a mess, a win, three topics at once. Sorting it is my job, not yours. (Capture lands at M5.)")
-                .font(KeptFont.ui(15))
-                .foregroundStyle(tokens.inkSoft)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            Spacer()
-            SealedFooter()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(tokens.backgroundGradient.ignoresSafeArea())
-        .presentationDetents([.medium])
-    }
-}
