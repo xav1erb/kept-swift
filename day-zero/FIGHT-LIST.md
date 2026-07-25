@@ -65,6 +65,54 @@
   (M2-CONTRACTS §7.3 amendment, pre-first-blob; Store CLAUDE.md gotcha logged). Close gated on the
   §6.8 device checklist (drag/idle feel, 60fps).
 
+- **M4-CONTRACTS approved** 2026-07-23 with four rulings (`day-zero/M4-CONTRACTS.md` §10):
+  chat turn = two independent calls (`/chat` reply + the existing utterance queue → `/extract`,
+  C1 one write path) · prep = client-driven stage machine, response schema-locked per stage,
+  `text` always allowed (crisis never schema-blocked) · chat history = encrypted store + E2E
+  backup (additive `"chatMessage"` interior tag, envelope version unchanged) · reply transport v1
+  = non-streaming typed JSON (streaming would be a new row, never silent drift). Draft amendments
+  recorded in-package: `Event` += `preparedAt`/`checkInArmed` · `PendingUtterance` += `chapterId`
+  + `extractionContext(openChapterId:)` (closes the latent "open chapter listed first" M1 gap) ·
+  `/acknowledge` stays deferred (chat replies are `/chat`'s job).
+- **M4 headless build green** 2026-07-23 (104 Swift tests / 17 suites + 4 keyless Deno assembler
+  tests: the two-path chat turn incl. failure-keeps-words-and-queue, the full prep walk with
+  store-grounded receipts + arming, invented-receipt rejection, hostile-envelope rejection
+  (chips>3, answers∉2–4, wrong-stage, mis-echoed turnId), timeline grammar goldens +
+  fold-overrides-everything + only-open-storm-pulses, guilt-free detail copy bank, chat history
+  through seal/restore, and the server-side C3 quarantine + crisis-path schema guarantees).
+  New organ: `supabase/functions/chat/` + `prompts/chat/` + `scripts/deploy-chat.sh`; prompt-suite
+  gained the chat pipeline (ps-006…ps-010: folded-no-reraise-chat, adjudication, crisis,
+  diagnosis, surveillance). Close gated on: `chat` deploy + first live prompt-suite run (👤 key),
+  the §8.11 device checklist, and ⚠ copy review (persona + stage prompts + detail copy bank).
+
+- **M5-CONTRACTS approved** 2026-07-25 with four rulings (`day-zero/M5-CONTRACTS.md` §8):
+  vent reply = typed filing confirmation only (no model call; `/acknowledge` stays deferred) ·
+  disambiguation card = vent-only for M5 (persisted batches surface on next vent; wider surfaces
+  = an M6 row) · sensitive chapters on the shared River = full structural suppression (the gentle
+  card's type carries no title/body) · smart prompt = typed selection + template (cached model
+  line = an M6 row). Free-tier vent cap explicitly OUT until M8 entitlement truth.
+- **M5 headless build green** 2026-07-25 (119 tests / 19 suites: the three-topic done-bar vent
+  with exact deep-link chips, two-Saras through the surface (question card → resolution → the
+  right Sara), nothing-lost on failed flush, smart-prompt goldens (armed post-event > nearer
+  unarmed > upcoming > quiet), structural session freshness, F9 mic gating + hold-to-talk via
+  the fake, the VoiceCapture on-device+walled source scan, §9 grading goldens + size-class law +
+  structural sensitive suppression (String(describing:) leak check) + future-events-off-the-river,
+  deterministic S-curve layout with exact bucket markers, filter purity, both copy banks
+  guilt-scanned). New walled module: `Kept/VoiceCapture/` (live `OnDeviceSpeechCapture`, headers
+  verified against the iOS 26.5 SDK). Close gated on the §6.11 device checklist (mic is
+  hardware-only truth) + ⚠ copy review (VentCopy, RiverCopy, mic/speech plist strings).
+
+- **M6-CONTRACTS approved** 2026-07-25 with four rulings (`day-zero/M6-CONTRACTS.md` §10):
+  server-plaintext check-in metadata = **content-free alarm rows** (client is scheduler-of-record;
+  prefs never leave the phone; server owns WHEN never WHAT — closes `supabase/README.md`'s open
+  ruling and **amends C10**: awareness decay becomes a client scheduled write; recap fits the same
+  timing/content split) · F12 exact-content opt-in = generic-only in M6, **NSE mechanism committed
+  for M7** (plaintext-upload door permanently closed; sensitive chapters always generic) ·
+  check-in materializes **in chapter chat** (stored truth, push is transport, works permissionless;
+  `Event.checkInAskedAt` dedupes) · the "Pom asks in-app" cluster (F10 ask surface, questions-held
+  affordance, wider disambiguation, cached model phrases) → **all M7 rows**; M6 stays the
+  notification vertical.
+
 ## Open
 
 *(none — new decisions get new rows, dated)*

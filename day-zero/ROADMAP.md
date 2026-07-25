@@ -47,14 +47,14 @@ rings + state sublines, streak chip, next-up card; new-chapter grid with per-typ
 **Done =** pins reflect store state live; a new chapter created via its sequence appears on the globe
 with a correct ring.
 
-### M4 — Chapter detail `☐`
+### M4 — Chapter detail `◐` (contracts APPROVED + headless build GREEN 2026-07-23, 104 tests + 4 Deno; 👤 remaining: deploy `chat` fn + live prompt-suite (needs PROVISIONING item 2) · device-verify M4-CONTRACTS §8.11 · ⚠ copy review)
 Chat tab with full context injection (folded items flagged do-not-raise); prep mode components
 (reframe, likely-answers card, perspective calibration, keep-card, opening sentence, post-event
 check-in arming); timeline tab with valence nodes + the folded-healed fold/expand/refold behavior.
 **Done =** prep mode renders all designed components from a seeded chapter; folded events never
 surface in chat unprompted (prompt-suite case), fold behavior exact.
 
-### M5 — Tell Pom + the River `☐` (F9 closed: type-only fallback)
+### M5 — Tell Pom + the River `◐` (contracts APPROVED + headless build GREEN 2026-07-25, 119 tests; 👤 remaining: device-verify M5-CONTRACTS §6.11 — hold-to-talk feel, airplane-mode STT proof, permission flows, River scroll perf; ⚠ copy review) (F9 closed: type-only fallback)
 Center-button capture sheet (fresh each session), hold-to-talk voice, contextual smart prompt + 6
 template chips, multi-topic filing → **filing confirmation with deep-link chips** (ships v1,
 non-negotiable); the River (S-curve layout engine, bank assignment, time markers, filters, §9 grading
@@ -62,7 +62,7 @@ rules incl. positives over-represented).
 **Done =** a three-topic vent files to three chapters and says so; River renders the seeded world with
 correct grading (only true open wounds pulse).
 
-### M6 — Check-in engine + notifications `☐` (F12 closed: generic phrasing default ON) 👤 needs APNs key (PROVISIONING item 3)
+### M6 — Check-in engine + notifications `◐` (contracts APPROVED 2026-07-25; F12 closed: generic phrasing default ON) 👤 needs APNs key (PROVISIONING item 3) for device push
 Server-side scan of upcoming/open events × prefs → check-ins in Pom's voice; post-event replies route
 into the owning chapter; local tiny-task reminders with quiet-hours + exemptions; pre-permission
 pattern; deep links; cron ops README starts.

@@ -60,10 +60,17 @@ with `--no-verify-jwt`).
 - **Status:** code landed 2026-07-19; deploy + secrets are run from Xavier's Supabase terminal;
   the fx-001 live smoke test (M1-CONTRACTS §7.5) closes the loop once the key exists.
 
-## Deliberately NOT deployed (deferred to their contract packages)
+## Check-in engine — `scheduled_checkins` + `checkin-dispatch` (C10; M6)
 
-- **Check-in derived metadata** (upcoming/open event dates × prefs the M6 engine scans) —
-  *what* metadata is acceptable in server plaintext is a product-privacy ruling; M6-CONTRACTS.
+**Ruled 2026-07-25 (M6-CONTRACTS §2/§10.1): content-free alarm rows.** The client is
+scheduler-of-record — fire times are computed on device from events × prefs (prefs never
+leave the phone); the server holds only `{fire_at, kind, chapter-uuid}` and deletes rows
+after firing. The cron job + Edge Function are a dumb alarm clock pushing the fixed generic
+copy bank (F12) — the payload builder's type admits no content field. Jobs are registered in
+`supabase/cron/README.md` the day they are wired. Server secrets when APNs lands (👤 item 3):
+`APNS_KEY_P8`, `APNS_KEY_ID`, `APNS_TEAM_ID`. Deploy via `scripts/deploy-checkin.sh`.
+
+## Deliberately NOT deployed (deferred to their contract packages)
 - **AI usage counters / free-tier vent caps** — shape depends on the M1 proxy contract (and
   F8 monetization); must stay content-free when it lands.
 - **Entitlement mirror tables** (Superwall/StoreKit, M8) — `docs/monetization.md` owns this.
