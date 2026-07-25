@@ -31,6 +31,8 @@ struct ChatBubbleView: View {
 struct InterviewView: View {
     @Environment(OnboardingModel.self) private var model
     @Environment(ThemeModel.self) private var themeModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pacer = TranscriptPacer()
     @State private var draft = ""
 
     var body: some View {
@@ -39,31 +41,52 @@ struct InterviewView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(model.interview.bubbles) { bubble in
-                            ChatBubbleView(bubble: bubble).id(bubble.id)
+                        ForEach(pacer.visible) { bubble in
+                            ChatBubbleView(bubble: bubble)
+                                .id(bubble.id)
+                                .transition(bubbleArrival(for: bubble.author, reduceMotion: reduceMotion))
+                        }
+                        if pacer.isPomTyping {
+                            TypingIndicatorBubble()
+                                .id(TypingIndicatorBubble.scrollId)
+                                .transition(bubbleArrival(for: .pom, reduceMotion: reduceMotion))
                         }
                     }
                     .padding(20)
                 }
-                .onChange(of: model.interview.bubbles.count) {
-                    if let last = model.interview.bubbles.last?.id {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            proxy.scrollTo(last, anchor: .bottom)
-                        }
-                    }
-                }
+                .onChange(of: pacer.visible.count) { scrollToLatest(proxy) }
+                .onChange(of: pacer.isPomTyping) { scrollToLatest(proxy) }
             }
             inputArea
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
                 .background(tokens.card.opacity(tokens.cardOpacity * 0.5))
         }
+        .task {
+            // A fresh start types the opening in; a resumed transcript never replays.
+            pacer.prime(model.interview.bubbles, paceOpening: model.interview.answers.isEmpty)
+        }
+        .onChange(of: model.interview.bubbles) { _, bubbles in
+            pacer.sync(to: bubbles)
+        }
+    }
+
+    private func scrollToLatest(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.25)) {
+            if pacer.isPomTyping {
+                proxy.scrollTo(TypingIndicatorBubble.scrollId, anchor: .bottom)
+            } else if let last = pacer.visible.last?.id {
+                proxy.scrollTo(last, anchor: .bottom)
+            }
+        }
     }
 
     @ViewBuilder
     private var inputArea: some View {
         let tokens = themeModel.tokens
-        if let node = model.interview.currentNode {
+        // The input waits for Pom's last line to land — it belongs to a question that, until
+        // then, hasn't been "sent" yet.
+        if let node = model.interview.currentNode, pacer.isCaughtUp {
             VStack(alignment: .leading, spacing: 10) {
                 switch node.input {
                 case .chips(let chips):
@@ -82,6 +105,7 @@ struct InterviewView: View {
                 }
             }
             .padding(.top, 10)
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
     }
 

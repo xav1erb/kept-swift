@@ -8,6 +8,8 @@ struct NewChapterView: View {
     @Environment(NewChapterModel.self) private var model
     @Environment(ThemeModel.self) private var themeModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pacer = TranscriptPacer()
 
     var body: some View {
         let tokens = themeModel.tokens
@@ -110,31 +112,49 @@ struct NewChapterView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 8) {
-                            ForEach(engine.bubbles) { bubble in
-                                ChatBubbleView(bubble: bubble).id(bubble.id)
+                            ForEach(pacer.visible) { bubble in
+                                ChatBubbleView(bubble: bubble)
+                                    .id(bubble.id)
+                                    .transition(bubbleArrival(for: bubble.author, reduceMotion: reduceMotion))
+                            }
+                            if pacer.isPomTyping {
+                                TypingIndicatorBubble()
+                                    .id(TypingIndicatorBubble.scrollId)
+                                    .transition(bubbleArrival(for: .pom, reduceMotion: reduceMotion))
                             }
                         }
                         .padding(20)
                     }
-                    .onChange(of: engine.bubbles.count) {
-                        if let last = engine.bubbles.last?.id {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                proxy.scrollTo(last, anchor: .bottom)
-                            }
-                        }
-                    }
+                    .onChange(of: pacer.visible.count) { scrollToLatest(proxy) }
+                    .onChange(of: pacer.isPomTyping) { scrollToLatest(proxy) }
                 }
                 sequenceInput(engine: engine, tokens: tokens)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 12)
                     .background(tokens.card.opacity(tokens.cardOpacity * 0.5))
             }
+            .task {
+                pacer.prime(engine.bubbles, paceOpening: engine.answers.isEmpty)
+            }
+            .onChange(of: engine.bubbles) { _, bubbles in
+                pacer.sync(to: bubbles)
+            }
+        }
+    }
+
+    private func scrollToLatest(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.25)) {
+            if pacer.isPomTyping {
+                proxy.scrollTo(TypingIndicatorBubble.scrollId, anchor: .bottom)
+            } else if let last = pacer.visible.last?.id {
+                proxy.scrollTo(last, anchor: .bottom)
+            }
         }
     }
 
     @ViewBuilder
     private func sequenceInput(engine: InterviewEngine, tokens: ThemeTokens) -> some View {
-        if engine.currentNode != nil {
+        if engine.currentNode != nil, pacer.isCaughtUp {
             VStack(alignment: .leading, spacing: 10) {
                 SequenceAnswerField { text in
                     await model.submitText(text)
@@ -151,6 +171,7 @@ struct NewChapterView: View {
                 }
             }
             .padding(.top, 10)
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
     }
 
